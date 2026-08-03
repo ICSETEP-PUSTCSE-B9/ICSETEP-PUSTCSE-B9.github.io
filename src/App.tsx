@@ -48,8 +48,8 @@ export default function App() {
 
       <main>
         <ProjectOverview info={info} />
-        <PITeam />
         <MissionVision />
+        <PITeam />
         <CoreTechnologies />
         <ProjectRoadmap />
         <Publications />

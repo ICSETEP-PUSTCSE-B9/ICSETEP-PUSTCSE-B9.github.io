@@ -17,8 +17,8 @@ export default function Header({ onAdminClick }: Props) {
 
   const navLinks = [
     { label: 'Overview', href: '#overview' },
-    { label: 'PI & Co-PI', href: '#pi-team' },
     { label: 'Mission & Vision', href: '#mission-vision' },
+    { label: 'PI & Co-PI', href: '#pi-team' },
     { label: 'Technologies', href: '#technologies' },
     { label: 'Roadmap', href: '#roadmap' },
     { label: 'Publications', href: '#publications' },
