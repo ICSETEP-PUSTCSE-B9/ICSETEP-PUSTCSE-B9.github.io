@@ -5,6 +5,13 @@ export function formatDate(iso: string): string {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+export function getAssetUrl(path: string): string {
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const prefix = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return `${prefix}${cleanPath}`;
+}
+
 export function relativeTime(iso: string): string {
   const d = new Date(iso).getTime();
   const now = Date.now();

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react';
+import { getAssetUrl } from '@/lib/utils';
 
 interface ProjectSlide {
   id: string;
@@ -78,7 +79,7 @@ export default function ImageSlider({ images = defaultImages }: ImageSliderProps
               }`}
             >
               <img
-                src={img.src}
+                src={getAssetUrl(img.src)}
                 alt={img.title}
                 className="h-full w-full object-cover object-center"
               />
@@ -165,7 +166,7 @@ export default function ImageSlider({ images = defaultImages }: ImageSliderProps
               <X className="h-6 w-6" />
             </button>
             <img
-              src={current.src}
+              src={getAssetUrl(current.src)}
               alt={current.title}
               className="max-h-[80vh] w-full rounded-xl object-contain"
             />

@@ -9,7 +9,7 @@ interface Props {
 
 export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('toukir@pust.ac.bd');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="toukir@pust.ac.bd"
+                placeholder="admin@pust.ac.bd"
                 className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pl-10 pr-3 text-sm text-ink-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Award, GraduationCap, ChevronDown, ChevronUp, MapPin, User } from 'lucide-react';
+import { getAssetUrl } from '@/lib/utils';
 
 interface TeamMember {
   id: string;
@@ -92,7 +93,7 @@ export default function PITeam() {
                 <div className="relative mx-auto h-32 w-32 overflow-hidden rounded-full ring-4 ring-brand-100 shadow-md bg-brand-50 flex items-center justify-center">
                   {!hasError ? (
                     <img
-                      src={m.photo}
+                      src={getAssetUrl(m.photo)}
                       alt={m.name}
                       onError={() => handleImgError(m.id)}
                       className="h-full w-full object-cover object-center"
