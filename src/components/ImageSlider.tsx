@@ -11,19 +11,19 @@ interface ProjectSlide {
 const defaultImages: ProjectSlide[] = [
   {
     id: 'inception-1',
-    src: '/team/projectinception1.jpg',
+    src: './team/projectinception1.jpg',
     title: 'Project Inception Program',
     subtitle: 'Smart, Affordable, and Sustainable Agro-Tech Transformation Project under ICSETEP',
   },
   {
     id: 'inception-2',
-    src: '/team/projectinception2.jpg',
+    src: './team/projectinception2.jpg',
     title: 'Project Inception Program',
     subtitle: 'Flagship Research Initiative (RDG B9) | Funded by ADB & Implemented by UGC Bangladesh',
   },
   {
     id: 'contract-egp',
-    src: '/team/contractEgp.jpg',
+    src: './team/contractEgp.jpg',
     title: 'First eGP Contract signing Ceremony at ICSETEP project',
     subtitle: 'Dept. of Computer Science and Engineering, Pabna University of Science and Technology',
   },
