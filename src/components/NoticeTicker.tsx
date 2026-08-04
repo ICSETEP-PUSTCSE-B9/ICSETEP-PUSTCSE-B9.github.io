@@ -6,17 +6,6 @@ interface Props {
   notices: Notice[];
 }
 
-const defaultPlaceholderNotice: Notice = {
-  id: 'welcome-notice',
-  title: 'ICSETEP RDG B9 Research Portal',
-  body: 'Official notices, guidelines, and announcements will appear here when posted by Admin.',
-  priority: 'normal',
-  is_pinned: false,
-  is_active: true,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
 export default function NoticeTicker({ notices }: Props) {
   // Filter active notices
   const realActive = notices.filter((n) => n.is_active);
