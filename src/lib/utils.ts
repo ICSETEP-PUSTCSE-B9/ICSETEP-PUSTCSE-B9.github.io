@@ -187,17 +187,19 @@ export async function pushNoticesToGitHub(
   notices: any[],
   token: string
 ): Promise<{ success: boolean; message: string }> {
-  if (!token) return { success: false, message: 'GitHub PAT token is required.' };
+  const cleanToken = token.trim();
+  if (!cleanToken) return { success: false, message: 'GitHub PAT token is required.' };
 
   const repo = 'ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io';
   const path = 'public/notices.json';
   const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+  const authHeader = `token ${cleanToken}`;
 
   try {
     let sha = '';
     const getRes = await fetch(url, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: authHeader,
         Accept: 'application/vnd.github+json',
       },
     });
@@ -216,7 +218,7 @@ export async function pushNoticesToGitHub(
     const putRes = await fetch(url, {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: authHeader,
         Accept: 'application/vnd.github+json',
         'Content-Type': 'application/json',
       },
@@ -229,6 +231,12 @@ export async function pushNoticesToGitHub(
 
     if (!putRes.ok) {
       const errJson = await putRes.json();
+      if (putRes.status === 404) {
+        return {
+          success: false,
+          message: 'GitHub Token error (Not Found). Ensure your PAT token has "repo" scope permission enabled.',
+        };
+      }
       return { success: false, message: errJson.message || 'Failed to publish to GitHub.' };
     }
 
@@ -242,13 +250,15 @@ export async function uploadFileToGitHub(
   file: File,
   token: string
 ): Promise<{ success: boolean; url?: string; message: string }> {
-  if (!token) return { success: false, message: 'GitHub PAT token is required.' };
+  const cleanToken = token.trim();
+  if (!cleanToken) return { success: false, message: 'GitHub PAT token is required.' };
 
   const repo = 'ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io';
   const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
   const fileName = `${Date.now()}_${cleanName}`;
   const path = `public/uploads/${fileName}`;
   const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+  const authHeader = `token ${cleanToken}`;
 
   try {
     const arrayBuffer = await file.arrayBuffer();
@@ -260,7 +270,7 @@ export async function uploadFileToGitHub(
     const putRes = await fetch(url, {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: authHeader,
         Accept: 'application/vnd.github+json',
         'Content-Type': 'application/json',
       },
@@ -269,6 +279,11 @@ export async function uploadFileToGitHub(
         content,
       }),
     });
+
+    if (!putRes.ok) {
+      const errJson = await putRes.json();
+      return { success: false, message: errJson.message || 'Failed to upload attachment to GitHub.' };
+    }
 
     const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${path}`;
     return { success: true, url: rawUrl, message: 'File uploaded to GitHub successfully!' };

@@ -65,11 +65,10 @@ export default function AdminDashboard({ onSignOut, onClose, onChanged }: Props)
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
-                  activeTab
+                className={`flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${activeTab
                     ? 'border-brand-600 text-brand-700'
                     : 'border-transparent text-ink-500 hover:text-ink-800'
-                }`}
+                  }`}
               >
                 <Icon className="h-4 w-4" />
                 {t.label}
@@ -147,7 +146,7 @@ function NoticesAdmin({
         const updated = list.map((item) => (item.id === n.id ? { ...item, is_pinned: !n.is_pinned } : item));
         localStorage.setItem('pust_notices_cache', JSON.stringify(updated));
       }
-    } catch {}
+    } catch { }
     window.dispatchEvent(new Event('pust_notices_updated'));
     setBusyId(null);
     refresh();
@@ -164,7 +163,7 @@ function NoticesAdmin({
         const updated = list.map((item) => (item.id === n.id ? { ...item, is_active: !n.is_active } : item));
         localStorage.setItem('pust_notices_cache', JSON.stringify(updated));
       }
-    } catch {}
+    } catch { }
     window.dispatchEvent(new Event('pust_notices_updated'));
     setBusyId(null);
     refresh();
@@ -189,7 +188,7 @@ function NoticesAdmin({
         const updated = list.filter((item) => item.id !== n.id);
         localStorage.setItem('pust_notices_cache', JSON.stringify(updated));
       }
-    } catch {}
+    } catch { }
     window.dispatchEvent(new Event('pust_notices_updated'));
     setBusyId(null);
     refresh();
@@ -274,11 +273,10 @@ function NoticesAdmin({
 
         {publishMessage && (
           <div
-            className={`mt-3 rounded-lg px-3 py-2 text-xs font-semibold ${
-              publishMessage.type === 'success'
+            className={`mt-3 rounded-lg px-3 py-2 text-xs font-semibold ${publishMessage.type === 'success'
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                 : 'bg-red-100 text-red-800 border border-red-300'
-            }`}
+              }`}
           >
             {publishMessage.text}
           </div>
@@ -292,9 +290,8 @@ function NoticesAdmin({
           return (
             <div
               key={n.id}
-              className={`rounded-xl border bg-white p-4 shadow-sm transition-opacity ${
-                n.is_active ? 'border-ink-200' : 'border-ink-200 opacity-60'
-              }`}
+              className={`rounded-xl border bg-white p-4 shadow-sm transition-opacity ${n.is_active ? 'border-ink-200' : 'border-ink-200 opacity-60'
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -528,7 +525,7 @@ function NoticeForm({
         currentNotices = [noticeObj, ...currentNotices];
       }
       localStorage.setItem('pust_notices_cache', JSON.stringify(currentNotices));
-    } catch {}
+    } catch { }
 
     window.dispatchEvent(new Event('pust_notices_updated'));
     onSaved();
@@ -629,7 +626,7 @@ function NoticeForm({
                     disabled={uploading}
                   />
                 </label>
-                
+
                 <div className="relative flex items-center justify-center">
                   <div className="w-full border-t border-ink-200"></div>
                   <span className="absolute bg-ink-50/50 px-2 text-[10px] uppercase font-bold text-ink-400">or enter file URL</span>
@@ -704,7 +701,7 @@ function UpdatesAdmin({
         const updated = list.filter((item) => item.id !== u.id);
         localStorage.setItem('pust_updates_cache', JSON.stringify(updated));
       }
-    } catch {}
+    } catch { }
     window.dispatchEvent(new Event('pust_updates_updated'));
     setBusyId(null);
     refresh();
@@ -779,7 +776,7 @@ function UpdateForm({
     await (update
       ? supabase.from('updates').update({ ...input, created_at: createdAtStr }).eq('id', update.id)
       : supabase.from('updates').insert({ ...input, created_at: createdAtStr }));
-    
+
     setSaving(false);
 
     try {
@@ -798,7 +795,7 @@ function UpdateForm({
         currentUpdates = [updateObj, ...currentUpdates];
       }
       localStorage.setItem('pust_updates_cache', JSON.stringify(currentUpdates));
-    } catch {}
+    } catch { }
 
     window.dispatchEvent(new Event('pust_updates_updated'));
     onSaved();
