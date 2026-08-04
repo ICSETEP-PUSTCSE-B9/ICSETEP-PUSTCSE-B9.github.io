@@ -38,8 +38,8 @@ export default function App() {
     await signOut();
   };
 
-  const showLogin = adminOpen && !session && !authLoading;
-  const showDashboard = adminOpen && session;
+  const showLogin = adminOpen && !session;
+  const showDashboard = adminOpen && Boolean(session);
 
   return (
     <div id="top" className="min-h-screen bg-white text-ink-900">

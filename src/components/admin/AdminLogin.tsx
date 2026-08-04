@@ -33,8 +33,16 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/60 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-scale-in sm:p-8">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/60 p-4 backdrop-blur-sm animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-scale-in sm:p-8"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2.5">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">

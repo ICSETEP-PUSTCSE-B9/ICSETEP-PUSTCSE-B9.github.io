@@ -83,7 +83,6 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
-    // Check local storage for authorized admin session fallback if offline
     const localAdmin = localStorage.getItem('pust_admin_authorized');
     if (localAdmin === 'true') {
       const mockSession: any = {
@@ -95,17 +94,33 @@ export function useAuth() {
     } else {
       supabase.auth.getSession().then(({ data }) => {
         if (!mounted) return;
-        setSession(data.session);
+        setSession(data?.session ?? null);
+        setLoading(false);
+      }).catch(() => {
+        if (!mounted) return;
         setLoading(false);
       });
     }
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
-      if (sess) setSession(sess);
-    });
+    let unsubscribe: (() => void) | undefined;
+    try {
+      const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+        if (!mounted) return;
+        if (sess) {
+          setSession(sess);
+        } else if (_event === 'SIGNED_OUT') {
+          setSession(null);
+        }
+        setLoading(false);
+      });
+      unsubscribe = () => sub?.subscription?.unsubscribe();
+    } catch (e) {
+      // ignore auth listener error if offline/unsupported
+    }
+
     return () => {
       mounted = false;
-      sub.subscription.unsubscribe();
+      if (unsubscribe) unsubscribe();
     };
   }, []);
 

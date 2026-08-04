@@ -24,9 +24,17 @@ export default function AdminDashboard({ onSignOut, onClose, onChanged }: Props)
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-ink-950/60 backdrop-blur-sm animate-fade-in">
+    <div
+      className="fixed inset-0 z-50 flex bg-ink-950/60 backdrop-blur-sm animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       {/* drawer panel */}
-      <div className="ml-auto flex h-full w-full max-w-2xl flex-col bg-ink-50 shadow-2xl animate-fade-in">
+      <div
+        className="ml-auto flex h-full w-full max-w-2xl flex-col bg-ink-50 shadow-2xl animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* header */}
         <div className="flex items-center justify-between border-b border-ink-200 bg-white px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2">
@@ -333,8 +341,16 @@ function NoticeForm({
   const meta = attachmentMeta[attachmentType] || attachmentMeta.other;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink-950/50 p-4 animate-fade-in">
-      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl animate-scale-in">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-ink-950/50 p-4 animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-lg font-bold text-ink-900">
             {notice ? 'Edit Notice' : 'New Notice'}
