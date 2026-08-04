@@ -93,13 +93,17 @@ export function useNotices() {
 
       // 2. Fetch Supabase remote notices
       let remoteNotices: Notice[] = [];
+      let hasRemoteData = false;
       try {
-        const { data: resData } = await supabase
+        const { data: resData, error: resErr } = await supabase
           .from('notices')
           .select('*')
           .order('is_pinned', { ascending: false })
           .order('created_at', { ascending: false });
-        if (resData) remoteNotices = resData as Notice[];
+        if (!resErr && resData) {
+          remoteNotices = resData as Notice[];
+          hasRemoteData = true;
+        }
       } catch {}
 
       const cached = localStorage.getItem('pust_notices_cache');
@@ -109,18 +113,27 @@ export function useNotices() {
       const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
 
       const map = new Map<string, Notice>();
-      // Insert GitHub repo notices (excluding deleted & sample)
-      githubNotices.forEach((n) => {
-        if (!deletedIds.has(n.id) && !isSampleNotice(n)) map.set(n.id, n);
-      });
-      // Insert remote notices (excluding deleted & sample)
-      remoteNotices.forEach((n) => {
-        if (!deletedIds.has(n.id) && !isSampleNotice(n)) map.set(n.id, n);
-      });
-      // Override/append local notices (excluding deleted & sample)
-      localList.forEach((n) => {
-        if (!deletedIds.has(n.id) && !isSampleNotice(n)) map.set(n.id, n);
-      });
+
+      if (hasRemoteData && remoteNotices.length > 0) {
+        // Supabase DB is the authoritative live source across all devices
+        remoteNotices.forEach((n) => {
+          if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+            map.set(n.id, n);
+          }
+        });
+      } else {
+        // Fallback if remote DB is empty or unreachable
+        githubNotices.forEach((n) => {
+          if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+            map.set(n.id, n);
+          }
+        });
+        localList.forEach((n) => {
+          if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+            map.set(n.id, n);
+          }
+        });
+      }
 
       const merged = Array.from(map.values()).sort((a, b) => {
         if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;

@@ -173,7 +173,10 @@ function NoticesAdmin({
   const remove = async (n: Notice) => {
     if (!confirm(`Delete notice "${n.title}"? This cannot be undone.`)) return;
     setBusyId(n.id);
+    await supabase.from('notices').update({ is_active: false }).eq('id', n.id);
     await supabase.from('notices').delete().eq('id', n.id);
+
+    let updatedList: Notice[] = [];
     try {
       const deletedStr = localStorage.getItem('pust_deleted_notices');
       const deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
@@ -185,10 +188,16 @@ function NoticesAdmin({
       const cached = localStorage.getItem('pust_notices_cache');
       if (cached) {
         const list: Notice[] = JSON.parse(cached);
-        const updated = list.filter((item) => item.id !== n.id);
-        localStorage.setItem('pust_notices_cache', JSON.stringify(updated));
+        updatedList = list.filter((item) => item.id !== n.id);
+        localStorage.setItem('pust_notices_cache', JSON.stringify(updatedList));
       }
     } catch { }
+
+    const githubToken = localStorage.getItem('pust_github_token');
+    if (githubToken) {
+      pushNoticesToGitHub(updatedList, githubToken).catch(() => {});
+    }
+
     window.dispatchEvent(new Event('pust_notices_updated'));
     setBusyId(null);
     refresh();
