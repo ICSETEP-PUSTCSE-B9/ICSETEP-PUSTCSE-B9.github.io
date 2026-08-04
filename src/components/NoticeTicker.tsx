@@ -18,8 +18,12 @@ const defaultPlaceholderNotice: Notice = {
 };
 
 export default function NoticeTicker({ notices }: Props) {
-  // Filter out any dummy / test notices and get active notices
+  // Filter active notices
   const realActive = notices.filter((n) => n.is_active);
+
+  if (realActive.length === 0) {
+    return null;
+  }
 
   // Filter pinned notices
   const pinnedActive = realActive.filter((n) => n.is_pinned);
@@ -30,10 +34,8 @@ export default function NoticeTicker({ notices }: Props) {
   if (pinnedActive.length > 0) {
     baseNotices = [...pinnedActive];
     isPinnedMode = true;
-  } else if (realActive.length > 0) {
-    baseNotices = [...realActive];
   } else {
-    baseNotices = [defaultPlaceholderNotice];
+    baseNotices = [...realActive];
   }
 
   // Sort by priority and created date

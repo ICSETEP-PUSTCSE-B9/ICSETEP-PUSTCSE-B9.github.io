@@ -46,9 +46,17 @@ export function useProjectInfo() {
 }
 
 export function useNotices() {
-  const isDummyNotice = (n: Notice) => {
+  const isSampleNotice = (n: Notice) => {
     const text = (n.title + ' ' + n.body).toLowerCase();
-    return text.includes('dummy notice') || text.includes('it is demo') || text.includes('dummy1');
+    return (
+      n.id === 'notice-1' ||
+      n.id === 'notice-2' ||
+      n.id.startsWith('default-') ||
+      n.id === 'welcome-notice' ||
+      text.includes('dummy notice') ||
+      text.includes('it is demo') ||
+      text.includes('dummy1')
+    );
   };
 
   const loadNotices = useCallback(() => {
@@ -57,7 +65,7 @@ export function useNotices() {
       const list: Notice[] = cached ? JSON.parse(cached) : [];
       const deletedStr = localStorage.getItem('pust_deleted_notices');
       const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
-      return list.filter((n) => !deletedIds.has(n.id) && !isDummyNotice(n));
+      return list.filter((n) => !deletedIds.has(n.id) && !isSampleNotice(n));
     } catch {
       return [];
     }
@@ -105,17 +113,17 @@ export function useNotices() {
       const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
 
       const map = new Map<string, Notice>();
-      // Insert GitHub repo notices
+      // Insert GitHub repo notices (excluding deleted & sample)
       githubNotices.forEach((n) => {
-        if (!deletedIds.has(n.id) && !isDummyNotice(n)) map.set(n.id, n);
+        if (!deletedIds.has(n.id) && !isSampleNotice(n)) map.set(n.id, n);
       });
-      // Insert remote notices (excluding deleted & dummy)
+      // Insert remote notices (excluding deleted & sample)
       remoteNotices.forEach((n) => {
-        if (!deletedIds.has(n.id) && !isDummyNotice(n)) map.set(n.id, n);
+        if (!deletedIds.has(n.id) && !isSampleNotice(n)) map.set(n.id, n);
       });
-      // Override/append local notices (excluding deleted & dummy)
+      // Override/append local notices (excluding deleted & sample)
       localList.forEach((n) => {
-        if (!deletedIds.has(n.id) && !isDummyNotice(n)) map.set(n.id, n);
+        if (!deletedIds.has(n.id) && !isSampleNotice(n)) map.set(n.id, n);
       });
 
       const merged = Array.from(map.values()).sort((a, b) => {
