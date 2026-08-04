@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "id": "212cbdf6-ab2a-436f-9b46-77c51c165e84",
+    "title": "Notice-1",
+    "body": "Dummy text",
+    "priority": "normal",
+    "is_pinned": false,
+    "is_active": true,
+    "attachment_type": "other",
+    "created_at": "2026-08-04T21:26:20.358Z",
+    "updated_at": "2026-08-04T21:26:20.358Z"
+  },
+  {
+    "id": "aba86227-6b39-468d-b715-c6897911f41a",
+    "title": "x;lmx",
+    "body": "lmwxl",
+    "priority": "normal",
+    "is_pinned": true,
+    "is_active": false,
+    "attachment_type": "other",
+    "created_at": "2026-08-04T20:56:10.189Z",
+    "updated_at": "2026-08-04T20:56:10.189Z"
+  }
+]
