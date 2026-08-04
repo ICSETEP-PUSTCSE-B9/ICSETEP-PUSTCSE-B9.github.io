@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNotices, useUpdates } from '@/lib/hooks';
 import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority, AttachmentType } from '@/lib/types';
-import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta, parseNoticeAttachment, pushNoticesToGitHub, uploadFileToGitHub, uploadFileToSupabaseStorage } from '@/lib/utils';
+import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta, parseNoticeAttachment, pushNoticesToGitHub, uploadFileToGitHub, uploadFileToSupabaseStorage, generateUUID } from '@/lib/utils';
 import { X, Megaphone, History, Plus, Pencil, Trash2, Pin, PinOff, Loader2, Save, Paperclip, Upload, FileText, FileSpreadsheet, Image as ImageIcon, File, Globe, Key } from 'lucide-react';
 
 interface Props {
@@ -452,7 +452,7 @@ function NoticeForm({
     setSaving(true);
     setError(null);
 
-    const noticeId = notice?.id || `notice-${Date.now()}`;
+    const noticeId = (notice?.id && notice.id.length === 36) ? notice.id : generateUUID();
     const fullInput: any = {
       id: noticeId,
       title,

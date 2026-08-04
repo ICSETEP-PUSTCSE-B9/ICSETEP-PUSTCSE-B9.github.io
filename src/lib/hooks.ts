@@ -47,15 +47,11 @@ export function useProjectInfo() {
 
 export function useNotices() {
   const isSampleNotice = (n: Notice) => {
-    const text = (n.title + ' ' + n.body).toLowerCase();
     return (
       n.id === 'notice-1' ||
       n.id === 'notice-2' ||
       n.id.startsWith('default-') ||
-      n.id === 'welcome-notice' ||
-      text.includes('dummy notice') ||
-      text.includes('it is demo') ||
-      text.includes('dummy1')
+      n.id === 'welcome-notice'
     );
   };
 

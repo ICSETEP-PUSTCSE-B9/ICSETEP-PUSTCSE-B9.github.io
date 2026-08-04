@@ -1,6 +1,17 @@
 import type { Priority } from './types';
 import { supabase } from './supabase';
 
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
