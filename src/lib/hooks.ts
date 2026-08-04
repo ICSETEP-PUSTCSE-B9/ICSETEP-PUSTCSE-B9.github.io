@@ -71,11 +71,32 @@ export function useNotices() {
     setLoading(true);
     setError(null);
     try {
-      const { data: resData, error: resError } = await supabase
-        .from('notices')
-        .select('*')
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false });
+      // 1. Fetch GitHub hosted notices.json for global visitor access
+      let githubNotices: Notice[] = [];
+      try {
+        const ghRes = await window.fetch('./notices.json?v=' + Date.now());
+        if (ghRes.ok) {
+          githubNotices = await ghRes.json();
+        } else {
+          const rawRes = await window.fetch(
+            'https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/notices.json?v=' + Date.now()
+          );
+          if (rawRes.ok) githubNotices = await rawRes.json();
+        }
+      } catch (e) {
+        console.warn('GitHub notice fetch:', e);
+      }
+
+      // 2. Fetch Supabase remote notices
+      let remoteNotices: Notice[] = [];
+      try {
+        const { data: resData } = await supabase
+          .from('notices')
+          .select('*')
+          .order('is_pinned', { ascending: false })
+          .order('created_at', { ascending: false });
+        if (resData) remoteNotices = resData as Notice[];
+      } catch {}
 
       const cached = localStorage.getItem('pust_notices_cache');
       const localList: Notice[] = cached ? JSON.parse(cached) : [];
@@ -84,12 +105,14 @@ export function useNotices() {
       const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
 
       const map = new Map<string, Notice>();
+      // Insert GitHub repo notices
+      githubNotices.forEach((n) => {
+        if (!deletedIds.has(n.id) && !isDummyNotice(n)) map.set(n.id, n);
+      });
       // Insert remote notices (excluding deleted & dummy)
-      if (resData) {
-        (resData as Notice[]).forEach((n) => {
-          if (!deletedIds.has(n.id) && !isDummyNotice(n)) map.set(n.id, n);
-        });
-      }
+      remoteNotices.forEach((n) => {
+        if (!deletedIds.has(n.id) && !isDummyNotice(n)) map.set(n.id, n);
+      });
       // Override/append local notices (excluding deleted & dummy)
       localList.forEach((n) => {
         if (!deletedIds.has(n.id) && !isDummyNotice(n)) map.set(n.id, n);

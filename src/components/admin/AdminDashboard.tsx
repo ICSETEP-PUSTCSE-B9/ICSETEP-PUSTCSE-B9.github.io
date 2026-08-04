@@ -171,16 +171,40 @@ function NoticesAdmin({
     onChanged();
   };
 
+  const handleExportNotices = () => {
+    const jsonStr = JSON.stringify(notices, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'notices.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-ink-500">{notices.length} notices total</p>
-        <button
-          onClick={() => setCreating(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-        >
-          <Plus className="h-4 w-4" /> New Notice
-        </button>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-ink-200 pb-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-brand-600">GitHub Sync & Database</p>
+          <p className="text-sm font-semibold text-ink-900">{notices.length} notices in repository</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExportNotices}
+            title="Download notices.json to commit to public/notices.json in GitHub repo"
+            className="flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-ink-50 shadow-sm"
+          >
+            <Save className="h-3.5 w-3.5 text-brand-600" /> Export notices.json
+          </button>
+          <button
+            onClick={() => setCreating(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700 shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> New Notice
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">

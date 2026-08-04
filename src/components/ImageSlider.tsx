@@ -74,9 +74,8 @@ export default function ImageSlider({ images = defaultImages }: ImageSliderProps
           return (
             <div
               key={img.id}
-              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
-              }`}
+              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+                }`}
             >
               <img
                 src={getAssetUrl(img.src)}
@@ -137,11 +136,10 @@ export default function ImageSlider({ images = defaultImages }: ImageSliderProps
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
-                className={`h-3 rounded-full transition-all duration-300 ${
-                  isActive
+                className={`h-3 rounded-full transition-all duration-300 ${isActive
                     ? 'w-8 bg-white shadow-lg'
                     : 'w-3 bg-white/50 hover:bg-white/80'
-                }`}
+                  }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
             );
