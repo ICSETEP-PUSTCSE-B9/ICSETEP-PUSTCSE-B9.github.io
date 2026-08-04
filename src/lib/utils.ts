@@ -1,4 +1,5 @@
 import type { Priority } from './types';
+import { supabase } from './supabase';
 
 export function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -179,6 +180,137 @@ export async function handleDownload(url: string, filename?: string) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  }
+}
+
+export async function pushNoticesToGitHub(
+  notices: any[],
+  token: string
+): Promise<{ success: boolean; message: string }> {
+  if (!token) return { success: false, message: 'GitHub PAT token is required.' };
+
+  const repo = 'ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io';
+  const path = 'public/notices.json';
+  const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+
+  try {
+    let sha = '';
+    const getRes = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+      },
+    });
+
+    if (getRes.ok) {
+      const getJson = await getRes.json();
+      sha = getJson.sha;
+    }
+
+    const jsonString = JSON.stringify(notices, null, 2);
+    const bytes = new TextEncoder().encode(jsonString);
+    let binary = '';
+    bytes.forEach((b) => (binary += String.fromCharCode(b)));
+    const content = btoa(binary);
+
+    const putRes = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: 'Update notices.json via Admin Dashboard',
+        content,
+        sha: sha || undefined,
+      }),
+    });
+
+    if (!putRes.ok) {
+      const errJson = await putRes.json();
+      return { success: false, message: errJson.message || 'Failed to publish to GitHub.' };
+    }
+
+    return { success: true, message: 'Successfully published notices.json directly to GitHub!' };
+  } catch (e: any) {
+    return { success: false, message: e.message || 'Network error while publishing to GitHub.' };
+  }
+}
+
+export async function uploadFileToGitHub(
+  file: File,
+  token: string
+): Promise<{ success: boolean; url?: string; message: string }> {
+  if (!token) return { success: false, message: 'GitHub PAT token is required.' };
+
+  const repo = 'ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io';
+  const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+  const fileName = `${Date.now()}_${cleanName}`;
+  const path = `public/uploads/${fileName}`;
+  const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    bytes.forEach((b) => (binary += String.fromCharCode(b)));
+    const content = btoa(binary);
+
+    const putRes = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: `Upload attachment ${fileName} via Admin Dashboard`,
+        content,
+      }),
+    });
+
+    const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${path}`;
+    return { success: true, url: rawUrl, message: 'File uploaded to GitHub successfully!' };
+  } catch (e: any) {
+    return { success: false, message: e.message || 'Network error while uploading attachment.' };
+  }
+}
+
+export async function uploadFileToSupabaseStorage(
+  file: File
+): Promise<{ success: boolean; url?: string; message: string }> {
+  try {
+    const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const fileName = `${Date.now()}_${cleanName}`;
+
+    // Try 'notices' bucket first, fallback to 'public'
+    let targetBucket = 'notices';
+    let { data, error } = await supabase.storage
+      .from(targetBucket)
+      .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+    if (error) {
+      targetBucket = 'public';
+      const fallbackRes = await supabase.storage
+        .from(targetBucket)
+        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+      data = fallbackRes.data;
+      error = fallbackRes.error;
+    }
+
+    if (error || !data) {
+      return { success: false, message: error?.message || 'Failed to upload to Supabase storage.' };
+    }
+
+    const { data: urlData } = supabase.storage.from(targetBucket).getPublicUrl(fileName);
+    return {
+      success: true,
+      url: urlData?.publicUrl || '',
+      message: 'File uploaded to Supabase Storage successfully!',
+    };
+  } catch (e: any) {
+    return { success: false, message: e.message || 'Error uploading file to Supabase Storage.' };
   }
 }
 

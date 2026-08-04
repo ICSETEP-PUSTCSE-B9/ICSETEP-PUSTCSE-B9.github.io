@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNotices, useUpdates } from '@/lib/hooks';
 import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority, AttachmentType } from '@/lib/types';
-import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta, parseNoticeAttachment } from '@/lib/utils';
-import { X, Megaphone, History, Plus, Pencil, Trash2, Pin, PinOff, Loader2, Save, Paperclip, Upload, FileText, FileSpreadsheet, Image as ImageIcon, File } from 'lucide-react';
+import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta, parseNoticeAttachment, pushNoticesToGitHub, uploadFileToGitHub, uploadFileToSupabaseStorage } from '@/lib/utils';
+import { X, Megaphone, History, Plus, Pencil, Trash2, Pin, PinOff, Loader2, Save, Paperclip, Upload, FileText, FileSpreadsheet, Image as ImageIcon, File, Globe, Key } from 'lucide-react';
 
 interface Props {
   onSignOut: () => void;
@@ -110,6 +110,32 @@ function NoticesAdmin({
   const [editing, setEditing] = useState<Notice | null>(null);
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [githubToken, setGithubToken] = useState<string>(() => localStorage.getItem('pust_github_token') || '');
+  const [showTokenInput, setShowTokenInput] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMessage, setPublishMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const saveToken = (val: string) => {
+    setGithubToken(val);
+    localStorage.setItem('pust_github_token', val);
+  };
+
+  const handlePushGitHub = async () => {
+    if (!githubToken) {
+      setShowTokenInput(true);
+      setPublishMessage({ type: 'error', text: 'Please enter a GitHub Personal Access Token (PAT) first.' });
+      return;
+    }
+    setPublishing(true);
+    setPublishMessage(null);
+    const res = await pushNoticesToGitHub(notices, githubToken);
+    setPublishing(false);
+    if (res.success) {
+      setPublishMessage({ type: 'success', text: res.message });
+    } else {
+      setPublishMessage({ type: 'error', text: res.message });
+    }
+  };
 
   const togglePin = async (n: Notice) => {
     setBusyId(n.id);
@@ -150,7 +176,6 @@ function NoticesAdmin({
     setBusyId(n.id);
     await supabase.from('notices').delete().eq('id', n.id);
     try {
-      // Record deleted notice ID permanently in local storage
       const deletedStr = localStorage.getItem('pust_deleted_notices');
       const deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
       if (!deletedIds.includes(n.id)) {
@@ -184,27 +209,80 @@ function NoticesAdmin({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-ink-200 pb-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-brand-600">GitHub Sync & Database</p>
-          <p className="text-sm font-semibold text-ink-900">{notices.length} notices in repository</p>
+      <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50/60 p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-700">
+              <Globe className="h-4 w-4 text-brand-600" /> GitHub Cloud Synchronization
+            </span>
+            <p className="mt-0.5 text-xs font-semibold text-ink-900">
+              {notices.length} notices published for all visitors across all devices
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowTokenInput((v) => !v)}
+              className="flex items-center gap-1 rounded-lg border border-ink-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50 shadow-sm"
+              title="Configure GitHub Personal Access Token for 1-Click Sync"
+            >
+              <Key className="h-3.5 w-3.5 text-amber-600" /> PAT Token
+            </button>
+            <button
+              type="button"
+              onClick={handleExportNotices}
+              title="Download notices.json to commit manually to GitHub"
+              className="flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50 shadow-sm"
+            >
+              <Save className="h-3.5 w-3.5 text-brand-600" /> Export JSON
+            </button>
+            <button
+              type="button"
+              onClick={handlePushGitHub}
+              disabled={publishing}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60 shadow-sm"
+            >
+              {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+              {publishing ? 'Publishing…' : '1-Click GitHub Sync'}
+            </button>
+            <button
+              onClick={() => setCreating(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 shadow-sm"
+            >
+              <Plus className="h-4 w-4" /> New Notice
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExportNotices}
-            title="Download notices.json to commit to public/notices.json in GitHub repo"
-            className="flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-ink-50 shadow-sm"
+
+        {showTokenInput && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3 space-y-2 animate-fade-in">
+            <label className="block text-xs font-bold text-ink-800">
+              🔑 GitHub Personal Access Token (PAT):
+            </label>
+            <input
+              type="password"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              value={githubToken}
+              onChange={(e) => saveToken(e.target.value)}
+              className="w-full rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-mono text-ink-900 outline-none focus:border-brand-500"
+            />
+            <p className="text-[11px] text-ink-500">
+              Generating a token with <span className="font-semibold text-ink-800">repo</span> scope allows 1-click cloud sync of notices & file attachments to all devices worldwide automatically.
+            </p>
+          </div>
+        )}
+
+        {publishMessage && (
+          <div
+            className={`mt-3 rounded-lg px-3 py-2 text-xs font-semibold ${
+              publishMessage.type === 'success'
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                : 'bg-red-100 text-red-800 border border-red-300'
+            }`}
           >
-            <Save className="h-3.5 w-3.5 text-brand-600" /> Export notices.json
-          </button>
-          <button
-            onClick={() => setCreating(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700 shadow-sm"
-          >
-            <Plus className="h-4 w-4" /> New Notice
-          </button>
-        </div>
+            {publishMessage.text}
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">
@@ -316,14 +394,42 @@ function NoticeForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setError(null);
     setUploading(true);
     const fileName = file.name;
     const detected = detectAttachmentType(fileName, file.type);
 
+    // 1. Primary: Upload file directly to Supabase Storage
+    const supaRes = await uploadFileToSupabaseStorage(file);
+    if (supaRes.success && supaRes.url) {
+      setAttachmentUrl(supaRes.url);
+      setAttachmentName(fileName);
+      setAttachmentType(detected);
+      setUploading(false);
+      return;
+    }
+
+    // 2. Fallback: Upload to GitHub repo if PAT token is configured
+    const token = localStorage.getItem('pust_github_token');
+    if (token) {
+      const uploadRes = await uploadFileToGitHub(file, token);
+      if (uploadRes.success && uploadRes.url) {
+        setAttachmentUrl(uploadRes.url);
+        setAttachmentName(fileName);
+        setAttachmentType(detected);
+        setUploading(false);
+        return;
+      }
+    }
+
+    // 3. Fallback: Base64 Data URL for local testing
+    if (file.size > 2.5 * 1024 * 1024) {
+      setError('Notice: Large file (>2.5MB). Create a public "notices" bucket in Supabase Storage or enter GitHub PAT for direct cloud hosting.');
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       const result = event.target?.result as string;

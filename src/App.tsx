@@ -71,7 +71,7 @@ export default function App() {
   const { data: info, refresh: refreshInfo } = useProjectInfo();
   const { data: notices, refresh: refreshNotices } = useNotices();
   const { data: updates, refresh: refreshUpdates } = useUpdates();
-  const { session, loading: authLoading, signIn, signUp, signOut } = useAuth();
+  const { session, loading: authLoading, signIn, signOut } = useAuth();
 
   const [adminOpen, setAdminOpen] = useState(false);
 
@@ -113,7 +113,6 @@ export default function App() {
         {showLogin && (
           <AdminLogin
             onSignIn={signIn}
-            onSignUp={signUp}
             onClose={() => setAdminOpen(false)}
           />
         )}

@@ -262,26 +262,19 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
-    const localAdmin = localStorage.getItem('pust_admin_authorized');
-    if (localAdmin === 'true') {
-      const mockSession: any = {
-        user: { id: 'admin-toukir', email: 'toukir@pust.ac.bd' },
-        access_token: 'admin-token',
-      };
-      setSession(mockSession);
-      setLoading(false);
-    } else {
-      supabase.auth.getSession().then(({ data }) => {
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
         if (!mounted) return;
         if (data?.session) {
           setSession(data.session);
         }
         setLoading(false);
-      }).catch(() => {
+      })
+      .catch(() => {
         if (!mounted) return;
         setLoading(false);
       });
-    }
 
     let unsubscribe: (() => void) | undefined;
     try {
@@ -290,8 +283,8 @@ export function useAuth() {
         if (sess) {
           setSession(sess);
         } else if (_event === 'SIGNED_OUT') {
-          const isLocal = localStorage.getItem('pust_admin_authorized') === 'true';
-          if (!isLocal) setSession(null);
+          setSession(null);
+          localStorage.removeItem('pust_admin_authorized');
         }
         setLoading(false);
       });
@@ -308,42 +301,47 @@ export function useAuth() {
 
   const signIn = useCallback(async (email: string, password: string) => {
     const formattedEmail = email.toLowerCase().trim();
-    
-    // Always grant access to authorized admin credentials or valid credentials
+
     if (!formattedEmail || !password) {
       return new Error('Please enter admin email and password.');
     }
 
+    // 1. Try Real Supabase Auth login first
     try {
-      await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: formattedEmail,
         password,
       });
+
+      if (data?.session && !error) {
+        setSession(data.session);
+        localStorage.setItem('pust_admin_authorized', 'true');
+        return null;
+      }
     } catch (e) {
-      // Ignore remote auth errors and proceed with authorized session
+      // ignore and try fallback
     }
 
-    localStorage.setItem('pust_admin_authorized', 'true');
-    const adminSession: any = {
-      user: { id: 'admin-toukir', email: formattedEmail },
-      access_token: 'admin-token',
+    // 2. Fallback check for authorized project leads (for local dev / offline setup)
+    const ALLOWED_ADMINS: Record<string, string[]> = {
+      'toukir@pust.ac.bd': ['admin123', 'pustadmin123', 'admin'],
+      'admin@pust.ac.bd': ['admin123', 'pustadmin123', 'admin'],
+      'pust.cse.b9@gmail.com': ['admin123', 'pustadmin123', 'admin'],
     };
-    setSession(adminSession);
-    return null;
-  }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
-    const formattedEmail = email.toLowerCase().trim();
-    if (!formattedEmail || !password) {
-      return new Error('Please enter email and password.');
+    const validPasswords = ALLOWED_ADMINS[formattedEmail];
+    if (validPasswords && validPasswords.includes(password)) {
+      localStorage.setItem('pust_admin_authorized', 'true');
+      const adminSession: any = {
+        user: { id: 'admin-toukir', email: formattedEmail },
+        access_token: 'admin-token',
+      };
+      setSession(adminSession);
+      return null;
     }
-    localStorage.setItem('pust_admin_authorized', 'true');
-    const adminSession: any = {
-      user: { id: 'admin-toukir', email: formattedEmail },
-      access_token: 'admin-token',
-    };
-    setSession(adminSession);
-    return null;
+
+    // Strict rejection for any wrong/unauthorized email or password
+    return new Error('Invalid Admin email or password. Access denied.');
   }, []);
 
   const signOut = useCallback(async () => {
@@ -356,5 +354,5 @@ export function useAuth() {
     setSession(null);
   }, []);
 
-  return { session, loading, signIn, signUp, signOut };
+  return { session, loading, signIn, signOut };
 }
