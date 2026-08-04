@@ -48,7 +48,7 @@ body {
 
 /* Marquee ticker — pause on hover */
 .ticker-track {
-  animation: ticker-scroll 52s linear infinite;
+  animation: ticker-scroll 48s linear infinite;
 }
 .ticker-track:hover {
   animation-play-state: paused;

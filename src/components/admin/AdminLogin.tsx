@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Mail, X, ShieldCheck, Loader2, UserPlus, LogIn, Zap } from 'lucide-react';
+import { Lock, Mail, X, ShieldCheck, Loader2, UserPlus, LogIn } from 'lucide-react';
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<{ message: string } | null>;
@@ -9,8 +9,8 @@ interface Props {
 
 export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('toukir@pust.ac.bd');
-  const [password, setPassword] = useState('ICSETEP@pust-B9');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -20,16 +20,9 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
     setError(null);
     setInfo(null);
     setBusy(true);
+
     const err =
       mode === 'signin' ? await onSignIn(email, password) : await onSignUp(email, password);
-    setBusy(false);
-    if (err) setError(err.message);
-  };
-
-  const quickSignIn = async () => {
-    setError(null);
-    setBusy(true);
-    const err = await onSignIn('toukir@pust.ac.bd', 'ICSETEP@pust-B9');
     setBusy(false);
     if (err) setError(err.message);
   };
@@ -51,7 +44,7 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
         className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-scale-in sm:p-8"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between">
+        <div className="mb-6 flex items-start justify-between">
           <div className="flex items-center gap-2.5">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
               <ShieldCheck className="h-5 w-5" />
@@ -68,22 +61,6 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
           </button>
         </div>
 
-        {/* One Click Admin Access Button */}
-        <button
-          type="button"
-          onClick={quickSignIn}
-          disabled={busy}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-ink-950 shadow-sm transition-all hover:bg-amber-400 active:scale-[0.98] disabled:opacity-60"
-        >
-          <Zap className="h-4 w-4 text-ink-950 fill-ink-950" />
-          <span>Quick Admin Sign In</span>
-        </button>
-
-        <div className="relative my-4 flex items-center justify-center">
-          <div className="w-full border-t border-ink-200"></div>
-          <span className="absolute bg-white px-2 text-[10px] uppercase font-bold text-ink-400">or enter credentials</span>
-        </div>
-
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-ink-700">Admin Email</label>
@@ -92,6 +69,7 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
               <input
                 type="email"
                 required
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="toukir@pust.ac.bd"
@@ -99,6 +77,7 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
               />
             </div>
           </div>
+
           <div>
             <label className="mb-1.5 block text-sm font-medium text-ink-700">Password</label>
             <div className="relative">
@@ -107,6 +86,7 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
                 type="password"
                 required
                 minLength={6}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
