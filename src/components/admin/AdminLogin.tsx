@@ -72,7 +72,7 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="toukir@pust.ac.bd"
+                placeholder="example: abc@gmail.com"
                 className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pl-10 pr-3 text-sm text-ink-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
