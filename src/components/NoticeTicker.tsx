@@ -6,51 +6,24 @@ interface Props {
   notices: Notice[];
 }
 
-const defaultNotices: Notice[] = [
-  {
-    id: 'default-1',
-    title: 'ICSETEP RDG B9 Research Sub-Project',
-    body: 'Smart, Affordable, and Sustainable Agro-Tech Transformation in Bangladesh (ADB & UGC Funded)',
-    priority: 'high',
-    is_pinned: true,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'default-2',
-    title: 'Research & Development Grant Awarded',
-    body: 'BDT 2.35 Crore Grant awarded for Explainable AI & Hyperspectral Imaging Agro-Tech Transformation',
-    priority: 'high',
-    is_pinned: true,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'default-3',
-    title: 'Department of CSE, PUST Research Lab',
-    body: 'State-of-the-art optical hardware setup & machine learning model development at Pabna University of Science & Technology',
-    priority: 'normal',
-    is_pinned: true,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
+const defaultPlaceholderNotice: Notice = {
+  id: 'welcome-notice',
+  title: 'ICSETEP RDG B9 Research Portal',
+  body: 'Official notices, guidelines, and announcements will appear here when posted by Admin.',
+  priority: 'normal',
+  is_pinned: false,
+  is_active: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
 
 export default function NoticeTicker({ notices }: Props) {
   // Filter out any dummy / test notices and get active notices
-  const realActive = notices.filter(
-    (n) => n.is_active && !n.title.toLowerCase().includes('dummy') && !n.body.toLowerCase().includes('demo')
-  );
+  const realActive = notices.filter((n) => n.is_active);
 
   // Filter pinned notices
   const pinnedActive = realActive.filter((n) => n.is_pinned);
 
-  // Rule: If there are pinned notices, ONLY show pinned notices in the slider!
-  // If 1 notice is pinned, only 1 is shown. If 2 notices are pinned, it slides those 2.
-  // If 0 notices are pinned, show all active notices.
   let baseNotices: Notice[];
   let isPinnedMode = false;
 
@@ -60,7 +33,7 @@ export default function NoticeTicker({ notices }: Props) {
   } else if (realActive.length > 0) {
     baseNotices = [...realActive];
   } else {
-    baseNotices = defaultNotices;
+    baseNotices = [defaultPlaceholderNotice];
   }
 
   // Sort by priority and created date
