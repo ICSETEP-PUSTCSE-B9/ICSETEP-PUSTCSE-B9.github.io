@@ -128,6 +128,22 @@ export function useNotices() {
             map.set(n.id, n);
           }
         });
+
+        // Find timestamp of latest notice in githubNotices
+        const latestGithubTime = githubNotices.reduce((max, n) => {
+          const t = new Date(n.created_at || 0).getTime();
+          return t > max ? t : max;
+        }, 0);
+
+        // Include remote notices from Supabase DB ONLY if newly created after latest github sync
+        remoteNotices.forEach((n) => {
+          const nTime = new Date(n.created_at || 0).getTime();
+          if (!map.has(n.id) && !deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+            if (githubNotices.length === 0 || nTime > latestGithubTime) {
+              map.set(n.id, n);
+            }
+          }
+        });
       } else {
         // Fallback to Supabase remote DB if GitHub notices.json is unavailable
         remoteNotices.forEach((n) => {

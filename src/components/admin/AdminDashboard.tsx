@@ -195,7 +195,19 @@ function NoticesAdmin({
 
     const githubToken = localStorage.getItem('pust_github_token');
     if (githubToken) {
-      pushNoticesToGitHub(updatedList, githubToken).catch(() => {});
+      setPublishing(true);
+      const syncRes = await pushNoticesToGitHub(updatedList, githubToken);
+      setPublishing(false);
+      if (syncRes.success) {
+        setPublishMessage({ type: 'success', text: 'Notice deleted and synced across all devices worldwide!' });
+      } else {
+        setPublishMessage({ type: 'error', text: 'Notice deleted locally. GitHub Sync failed: ' + syncRes.message });
+      }
+    } else {
+      setPublishMessage({
+        type: 'error',
+        text: 'Notice deleted locally. Enter your GitHub PAT Token above to sync deletion across all devices worldwide.',
+      });
     }
 
     window.dispatchEvent(new Event('pust_notices_updated'));
