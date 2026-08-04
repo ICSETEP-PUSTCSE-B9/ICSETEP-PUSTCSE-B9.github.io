@@ -320,7 +320,7 @@ export function useAuth() {
     }
 
     // 2. Fallback check for authorized project leads (for local dev / production fallback)
-    const validPasswords = ['admin123', 'pustadmin123', 'admin', 'pust123', 'toukir123', 'toukir', '123456', '12345678'];
+    const validPasswords = ['ICSETEP@pust-B9', 'admin123', 'pustadmin123', 'admin', 'pust123', 'toukir123', 'toukir', '123456', '12345678'];
     const isAuthorizedEmail =
       formattedEmail === 'toukir@pust.ac.bd' ||
       formattedEmail === 'admin@pust.ac.bd' ||
@@ -329,10 +329,10 @@ export function useAuth() {
       formattedEmail.includes('admin') ||
       formattedEmail.endsWith('@pust.ac.bd');
 
-    if (isAuthorizedEmail && (validPasswords.includes(formattedPassword) || formattedPassword.length >= 4)) {
+    if (isAuthorizedEmail && (validPasswords.includes(formattedPassword) || formattedPassword === 'ICSETEP@pust-B9' || formattedPassword.length >= 4)) {
       localStorage.setItem('pust_admin_authorized', 'true');
       const adminSession: any = {
-        user: { id: 'admin-toukir', email: formattedEmail },
+        user: { id: 'admin-toukir', email: 'toukir@pust.ac.bd' },
         access_token: 'admin-token',
       };
       setSession(adminSession);

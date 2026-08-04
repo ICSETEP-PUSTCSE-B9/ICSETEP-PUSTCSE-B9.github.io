@@ -64,7 +64,7 @@ export default function AdminLogin({ onSignIn, onClose }: Props) {
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@pust.ac.bd"
+                placeholder="abc@gmil.com"
                 className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pl-10 pr-3 text-sm text-ink-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
@@ -77,11 +77,11 @@ export default function AdminLogin({ onSignIn, onClose }: Props) {
               <input
                 type="password"
                 required
-                minLength={6}
+                minLength={4}
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="passwod@"
                 className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pl-10 pr-3 text-sm text-ink-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
