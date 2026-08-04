@@ -47,11 +47,15 @@ export function useProjectInfo() {
 
 export function useNotices() {
   const isSampleNotice = (n: Notice) => {
+    const title = (n.title || '').toLowerCase();
     return (
       n.id === 'notice-1' ||
       n.id === 'notice-2' ||
+      n.id === 'a8ac4ff7-7d89-4c55-93bb-c5f04a72849f' ||
       n.id.startsWith('default-') ||
-      n.id === 'welcome-notice'
+      n.id === 'welcome-notice' ||
+      title.includes('dummy') ||
+      title.includes('demo notice')
     );
   };
 
@@ -75,17 +79,22 @@ export function useNotices() {
     setLoading(true);
     setError(null);
     try {
-      // 1. Fetch GitHub hosted notices.json for global visitor access
+      // 1. Fetch GitHub hosted notices.json for global visitor access across all devices
       let githubNotices: Notice[] = [];
+      let hasGithubData = false;
       try {
         const ghRes = await window.fetch('./notices.json?v=' + Date.now());
         if (ghRes.ok) {
           githubNotices = await ghRes.json();
+          hasGithubData = true;
         } else {
           const rawRes = await window.fetch(
             'https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/notices.json?v=' + Date.now()
           );
-          if (rawRes.ok) githubNotices = await rawRes.json();
+          if (rawRes.ok) {
+            githubNotices = await rawRes.json();
+            hasGithubData = true;
+          }
         }
       } catch (e) {
         console.warn('GitHub notice fetch:', e);
@@ -93,7 +102,6 @@ export function useNotices() {
 
       // 2. Fetch Supabase remote notices
       let remoteNotices: Notice[] = [];
-      let hasRemoteData = false;
       try {
         const { data: resData, error: resErr } = await supabase
           .from('notices')
@@ -102,7 +110,6 @@ export function useNotices() {
           .order('created_at', { ascending: false });
         if (!resErr && resData) {
           remoteNotices = resData as Notice[];
-          hasRemoteData = true;
         }
       } catch {}
 
@@ -114,26 +121,26 @@ export function useNotices() {
 
       const map = new Map<string, Notice>();
 
-      // 1. Remote notices from Supabase DB
-      remoteNotices.forEach((n) => {
-        if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
-          map.set(n.id, n);
-        }
-      });
+      if (hasGithubData && Array.isArray(githubNotices)) {
+        // githubNotices (public/notices.json) is the master cross-device source published by Admin
+        githubNotices.forEach((n) => {
+          if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+            map.set(n.id, n);
+          }
+        });
+      } else {
+        // Fallback to Supabase remote DB if GitHub notices.json is unavailable
+        remoteNotices.forEach((n) => {
+          if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+            map.set(n.id, n);
+          }
+        });
+      }
 
-      // 2. Local notices cache (ensures newly created notices show immediately)
+      // Local notices cache (ensures newly created notices show immediately on Admin's browser)
       localList.forEach((n) => {
         if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
           map.set(n.id, n);
-        }
-      });
-
-      // 3. GitHub hosted notices.json fallback
-      githubNotices.forEach((n) => {
-        if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
-          if (!map.has(n.id)) {
-            map.set(n.id, n);
-          }
         }
       });
 
