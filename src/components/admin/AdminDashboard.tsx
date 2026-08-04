@@ -110,7 +110,7 @@ function NoticesAdmin({
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [githubToken, setGithubToken] = useState<string>(() => localStorage.getItem('pust_github_token') || '');
-  const [showTokenInput, setShowTokenInput] = useState(false);
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(() => !localStorage.getItem('pust_github_token'));
   const [publishing, setPublishing] = useState(false);
   const [publishMessage, setPublishMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -545,7 +545,9 @@ function NoticeForm({
     // 3. GITHUB SYNC: Push to GitHub repo if PAT token is configured
     const githubToken = localStorage.getItem('pust_github_token');
     if (githubToken && updatedNoticesList.length > 0) {
-      pushNoticesToGitHub(updatedNoticesList, githubToken).catch(() => {});
+      try {
+        await pushNoticesToGitHub(updatedNoticesList, githubToken);
+      } catch {}
     }
 
     setSaving(false);

@@ -79,39 +79,23 @@ export function useNotices() {
     setLoading(true);
     setError(null);
     try {
-      // 1. Fetch GitHub hosted notices.json for global visitor access across all devices
+      // Fetch GitHub hosted notices.json with cache-busting timestamp (master cross-device source)
       let githubNotices: Notice[] = [];
-      let hasGithubData = false;
       try {
         const ghRes = await window.fetch('./notices.json?v=' + Date.now());
         if (ghRes.ok) {
           githubNotices = await ghRes.json();
-          hasGithubData = true;
         } else {
           const rawRes = await window.fetch(
             'https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/notices.json?v=' + Date.now()
           );
           if (rawRes.ok) {
             githubNotices = await rawRes.json();
-            hasGithubData = true;
           }
         }
       } catch (e) {
         console.warn('GitHub notice fetch:', e);
       }
-
-      // 2. Fetch Supabase remote notices
-      let remoteNotices: Notice[] = [];
-      try {
-        const { data: resData, error: resErr } = await supabase
-          .from('notices')
-          .select('*')
-          .order('is_pinned', { ascending: false })
-          .order('created_at', { ascending: false });
-        if (!resErr && resData) {
-          remoteNotices = resData as Notice[];
-        }
-      } catch {}
 
       const cached = localStorage.getItem('pust_notices_cache');
       const localList: Notice[] = cached ? JSON.parse(cached) : [];
@@ -121,39 +105,16 @@ export function useNotices() {
 
       const map = new Map<string, Notice>();
 
-      if (hasGithubData && Array.isArray(githubNotices)) {
-        // githubNotices (public/notices.json) is the master cross-device source published by Admin
+      // 1. Fill map with githubNotices (the live global cloud source across all devices)
+      if (Array.isArray(githubNotices)) {
         githubNotices.forEach((n) => {
-          if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
-            map.set(n.id, n);
-          }
-        });
-
-        // Find timestamp of latest notice in githubNotices
-        const latestGithubTime = githubNotices.reduce((max, n) => {
-          const t = new Date(n.created_at || 0).getTime();
-          return t > max ? t : max;
-        }, 0);
-
-        // Include remote notices from Supabase DB ONLY if newly created after latest github sync
-        remoteNotices.forEach((n) => {
-          const nTime = new Date(n.created_at || 0).getTime();
-          if (!map.has(n.id) && !deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
-            if (githubNotices.length === 0 || nTime > latestGithubTime) {
-              map.set(n.id, n);
-            }
-          }
-        });
-      } else {
-        // Fallback to Supabase remote DB if GitHub notices.json is unavailable
-        remoteNotices.forEach((n) => {
           if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
             map.set(n.id, n);
           }
         });
       }
 
-      // Local notices cache (ensures newly created notices show immediately on Admin's browser)
+      // 2. Local notices cache (uncommitted local additions on current browser)
       localList.forEach((n) => {
         if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
           map.set(n.id, n);
@@ -166,9 +127,6 @@ export function useNotices() {
       });
 
       setData(merged);
-      if (merged.length > 0) {
-        localStorage.setItem('pust_notices_cache', JSON.stringify(merged));
-      }
     } catch (e: any) {
       if (data.length === 0) setError(e.message || 'Failed to load notices.');
     } finally {
