@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 
 /**
- * Observes section containers and cards as they enter and leave the viewport.
- * Adds `is-visible` when scrolled into view, and removes `is-visible` when scrolled out of view
- * with an enriched staggered scale & slide effect.
+ * Observes section containers and cards as they enter the viewport.
+ * Adds `is-visible` when scrolled into view with an enriched staggered scale & slide effect.
+ * Ensures sections remain fully visible and never turn blank on page load or navigation.
  */
 export function useScrollReveal() {
   useEffect(() => {
@@ -12,15 +12,12 @@ export function useScrollReveal() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add('is-visible');
-          } else {
-            // Remove class when out of view so animation re-triggers enriched on every scroll
-            entry.target.classList.remove('is-visible');
           }
         });
       },
       {
-        threshold: 0.1,
-        rootMargin: '0px 0px -25px 0px',
+        threshold: 0.01,
+        rootMargin: '100px 0px 100px 0px',
       }
     );
 
@@ -33,20 +30,28 @@ export function useScrollReveal() {
         if (!el.classList.contains('reveal') && !el.classList.contains('reveal-scale')) {
           el.classList.add('reveal');
         }
-        // Stagger transitions nicely across cards in grids
         if (!el.style.transitionDelay) {
-          const delay = (index % 3) * 90;
+          const delay = (index % 3) * 60;
           el.style.transitionDelay = `${delay}ms`;
         }
+
+        // Make elements already near/in viewport visible immediately on page load
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight + 150 && rect.bottom > -150) {
+          el.classList.add('is-visible');
+        }
+
         observer.observe(el);
       });
     };
 
     observeElements();
-    const timer = setTimeout(observeElements, 250);
+    const t1 = setTimeout(observeElements, 100);
+    const t2 = setTimeout(observeElements, 400);
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(t1);
+      clearTimeout(t2);
       observer.disconnect();
     };
   }, []);

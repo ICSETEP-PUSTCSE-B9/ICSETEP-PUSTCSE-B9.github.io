@@ -46,13 +46,18 @@ export function useProjectInfo() {
 }
 
 export function useNotices() {
+  const isDummyNotice = (n: Notice) => {
+    const text = (n.title + ' ' + n.body).toLowerCase();
+    return text.includes('dummy notice') || text.includes('it is demo') || text.includes('dummy1');
+  };
+
   const loadNotices = useCallback(() => {
     try {
       const cached = localStorage.getItem('pust_notices_cache');
       const list: Notice[] = cached ? JSON.parse(cached) : [];
       const deletedStr = localStorage.getItem('pust_deleted_notices');
       const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
-      return list.filter((n) => !deletedIds.has(n.id));
+      return list.filter((n) => !deletedIds.has(n.id) && !isDummyNotice(n));
     } catch {
       return [];
     }
@@ -79,15 +84,15 @@ export function useNotices() {
       const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
 
       const map = new Map<string, Notice>();
-      // Insert remote notices (excluding deleted)
+      // Insert remote notices (excluding deleted & dummy)
       if (resData) {
         (resData as Notice[]).forEach((n) => {
-          if (!deletedIds.has(n.id)) map.set(n.id, n);
+          if (!deletedIds.has(n.id) && !isDummyNotice(n)) map.set(n.id, n);
         });
       }
-      // Override/append local notices (excluding deleted)
+      // Override/append local notices (excluding deleted & dummy)
       localList.forEach((n) => {
-        if (!deletedIds.has(n.id)) map.set(n.id, n);
+        if (!deletedIds.has(n.id) && !isDummyNotice(n)) map.set(n.id, n);
       });
 
       const merged = Array.from(map.values()).sort((a, b) => {

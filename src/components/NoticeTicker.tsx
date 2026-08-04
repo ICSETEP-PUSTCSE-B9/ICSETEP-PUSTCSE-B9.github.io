@@ -21,6 +21,16 @@ const defaultNotices: Notice[] = [
     id: 'default-2',
     title: 'Research & Development Grant Awarded',
     body: 'BDT 2.35 Crore Grant awarded for Explainable AI & Hyperspectral Imaging Agro-Tech Transformation',
+    priority: 'high',
+    is_pinned: true,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-3',
+    title: 'Department of CSE, PUST Research Lab',
+    body: 'State-of-the-art optical hardware setup & machine learning model development at Pabna University of Science & Technology',
     priority: 'normal',
     is_pinned: true,
     is_active: true,
@@ -30,10 +40,12 @@ const defaultNotices: Notice[] = [
 ];
 
 export default function NoticeTicker({ notices }: Props) {
-  // Get ALL active notices
-  const activeNotices = notices.filter((n) => n.is_active);
+  // Filter out any dummy / test notices and get active notices
+  const realActive = notices.filter(
+    (n) => n.is_active && !n.title.toLowerCase().includes('dummy') && !n.body.toLowerCase().includes('demo')
+  );
 
-  const baseNotices = activeNotices.length > 0 ? [...activeNotices] : defaultNotices;
+  const baseNotices = realActive.length > 0 ? [...realActive] : defaultNotices;
 
   // Sort: Pinned notices first, then High Priority notices, then latest created
   baseNotices.sort((a, b) => {
@@ -45,8 +57,13 @@ export default function NoticeTicker({ notices }: Props) {
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
-  // Duplicate list to create seamless looping ticker sequence
-  const items = [...baseNotices, ...baseNotices, ...baseNotices, ...baseNotices];
+  // Multiply 16 times to guarantee 100% full screen width coverage on all monitor sizes (1080p, 1440p, 4K)
+  const items = [
+    ...baseNotices, ...baseNotices, ...baseNotices, ...baseNotices,
+    ...baseNotices, ...baseNotices, ...baseNotices, ...baseNotices,
+    ...baseNotices, ...baseNotices, ...baseNotices, ...baseNotices,
+    ...baseNotices, ...baseNotices, ...baseNotices, ...baseNotices,
+  ];
 
   const handleScrollToNotices = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -70,7 +87,7 @@ export default function NoticeTicker({ notices }: Props) {
       </div>
 
       <div className="relative flex-1 overflow-hidden py-2.5">
-        <div className="ticker-track flex w-max items-center gap-8 whitespace-nowrap pl-4">
+        <div className="ticker-track flex w-max min-w-full items-center gap-8 whitespace-nowrap pl-4">
           {items.map((n, i) => {
             const ps = priorityStyles[n.priority] ?? priorityStyles.normal;
             const { cleanBody, attachmentUrl, attachmentName } = parseNoticeAttachment(n);
