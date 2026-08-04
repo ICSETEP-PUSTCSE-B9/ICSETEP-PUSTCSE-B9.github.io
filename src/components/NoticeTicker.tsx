@@ -72,8 +72,8 @@ export default function NoticeTicker({ notices }: Props) {
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
-  // Multiply to guarantee continuous scrolling marquee coverage across all screens
-  const repeatCount = Math.max(4, Math.ceil(16 / (baseNotices.length || 1)));
+  // Multiply moderately to guarantee continuous scrolling marquee coverage without rushing speed
+  const repeatCount = Math.max(2, Math.ceil(8 / (baseNotices.length || 1)));
   const items: Notice[] = [];
   for (let i = 0; i < repeatCount; i++) {
     items.push(...baseNotices);
@@ -85,12 +85,13 @@ export default function NoticeTicker({ notices }: Props) {
 
     const targetEl = document.getElementById(`notice-card-${noticeId}`);
     if (targetEl) {
+      targetEl.classList.add('is-visible');
       targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       // Temporary highlight pulse effect on target notice card
       targetEl.classList.add('ring-4', 'ring-brand-500', 'scale-[1.02]');
       setTimeout(() => {
         targetEl.classList.remove('ring-4', 'ring-brand-500', 'scale-[1.02]');
-      }, 2500);
+      }, 3000);
     } else {
       const boardEl = document.getElementById('notices');
       if (boardEl) boardEl.scrollIntoView({ behavior: 'smooth' });
@@ -110,7 +111,7 @@ export default function NoticeTicker({ notices }: Props) {
       <div className="flex shrink-0 items-center gap-2 bg-brand-600 px-3 py-2 sm:px-4 group-hover/ticker:bg-brand-500 transition-colors">
         <Megaphone className="h-4 w-4 shrink-0 text-white" />
         <span className="text-xs font-bold uppercase tracking-wider text-white">
-          {isPinnedMode ? `Pinned Notice (${baseNotices.length})` : `Notice (${baseNotices.length})`}
+          {isPinnedMode ? 'Pinned Notice' : 'Notice'}
         </span>
       </div>
 
