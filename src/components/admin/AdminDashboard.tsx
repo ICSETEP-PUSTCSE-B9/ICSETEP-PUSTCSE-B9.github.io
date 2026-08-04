@@ -452,7 +452,9 @@ function NoticeForm({
     setSaving(true);
     setError(null);
 
+    const noticeId = notice?.id || `notice-${Date.now()}`;
     const fullInput: any = {
+      id: noticeId,
       title,
       body,
       priority,
@@ -461,6 +463,7 @@ function NoticeForm({
       attachment_url: attachmentUrl || null,
       attachment_name: attachmentName || null,
       attachment_type: attachmentType || null,
+      created_at: notice?.created_at || new Date().toISOString(),
     };
 
     let { error } = await (notice
@@ -481,11 +484,13 @@ function NoticeForm({
       }
 
       const fallbackInput = {
+        id: noticeId,
         title,
         body: cleanBody,
         priority,
         is_pinned: isPinned,
         is_active: isActive,
+        created_at: notice?.created_at || new Date().toISOString(),
       };
 
       const fallbackRes = await (notice
@@ -498,6 +503,7 @@ function NoticeForm({
     setSaving(false);
 
     // Save to local cache unconditionally so admin actions work 100% locally
+    let updatedNoticesList: Notice[] = [];
     try {
       const cachedStr = localStorage.getItem('pust_notices_cache');
       let currentNotices: Notice[] = cachedStr ? JSON.parse(cachedStr) : [];
@@ -507,7 +513,7 @@ function NoticeForm({
         finalBody = `${finalBody}\n\n[ATTACHMENT:${JSON.stringify(attObj)}]`;
       }
       const noticeObj: Notice = {
-        id: notice?.id || `notice-${Date.now()}`,
+        id: noticeId,
         title,
         body: finalBody,
         priority,
@@ -524,8 +530,15 @@ function NoticeForm({
       } else {
         currentNotices = [noticeObj, ...currentNotices];
       }
+      updatedNoticesList = currentNotices;
       localStorage.setItem('pust_notices_cache', JSON.stringify(currentNotices));
     } catch { }
+
+    // Auto-sync to GitHub repo if PAT token is configured in localStorage
+    const githubToken = localStorage.getItem('pust_github_token');
+    if (githubToken && updatedNoticesList.length > 0) {
+      pushNoticesToGitHub(updatedNoticesList, githubToken).catch(() => {});
+    }
 
     window.dispatchEvent(new Event('pust_notices_updated'));
     onSaved();
