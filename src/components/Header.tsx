@@ -57,9 +57,9 @@ export default function Header({ onAdminClick }: Props) {
         <div className="flex items-center gap-2">
           <button
             onClick={onAdminClick}
-            className="hidden items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm font-medium text-ink-700 transition-colors hover:border-ink-300 hover:bg-ink-50 sm:flex"
+            className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3.5 py-1.5 text-sm font-semibold text-brand-700 transition-all hover:bg-brand-100 hover:border-brand-300 shadow-sm"
           >
-            <ShieldCheck className="h-4 w-4" />
+            <ShieldCheck className="h-4 w-4 text-brand-600" />
             Admin
           </button>
           <button

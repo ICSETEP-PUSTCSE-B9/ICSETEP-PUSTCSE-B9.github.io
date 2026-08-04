@@ -18,21 +18,37 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Reveal-on-scroll: elements start hidden, animate when .is-visible is added */
+/* Rich Enriched Reveal-on-scroll Animations */
 .reveal {
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-  will-change: opacity, transform;
+  transform: scale(0.96) translateY(24px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), 
+              transform 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform, box-shadow;
 }
+
 .reveal.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: scale(1) translateY(0);
+}
+
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.93) translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), 
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-scale.is-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
 }
 
 /* Marquee ticker — pause on hover */
 .ticker-track {
-  animation: ticker-scroll 18s linear infinite;
+  animation: ticker-scroll 48s linear infinite;
 }
 .ticker-track:hover {
   animation-play-state: paused;

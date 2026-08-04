@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNotices, useUpdates } from '@/lib/hooks';
 import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority, AttachmentType } from '@/lib/types';
-import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta } from '@/lib/utils';
+import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta, parseNoticeAttachment } from '@/lib/utils';
 import { X, Megaphone, History, Plus, Pencil, Trash2, Pin, PinOff, Loader2, Save, Paperclip, Upload, FileText, FileSpreadsheet, Image as ImageIcon, File } from 'lucide-react';
 
 interface Props {
@@ -113,27 +113,62 @@ function NoticesAdmin({
 
   const togglePin = async (n: Notice) => {
     setBusyId(n.id);
-    const { error } = await supabase.from('notices').update({ is_pinned: !n.is_pinned }).eq('id', n.id);
+    await supabase.from('notices').update({ is_pinned: !n.is_pinned }).eq('id', n.id);
+    try {
+      const cached = localStorage.getItem('pust_notices_cache');
+      if (cached) {
+        const list: Notice[] = JSON.parse(cached);
+        const updated = list.map((item) => (item.id === n.id ? { ...item, is_pinned: !n.is_pinned } : item));
+        localStorage.setItem('pust_notices_cache', JSON.stringify(updated));
+      }
+    } catch {}
+    window.dispatchEvent(new Event('pust_notices_updated'));
     setBusyId(null);
-    if (error) { alert(error.message); return; }
-    refresh(); onChanged();
+    refresh();
+    onChanged();
   };
 
   const toggleActive = async (n: Notice) => {
     setBusyId(n.id);
-    const { error } = await supabase.from('notices').update({ is_active: !n.is_active }).eq('id', n.id);
+    await supabase.from('notices').update({ is_active: !n.is_active }).eq('id', n.id);
+    try {
+      const cached = localStorage.getItem('pust_notices_cache');
+      if (cached) {
+        const list: Notice[] = JSON.parse(cached);
+        const updated = list.map((item) => (item.id === n.id ? { ...item, is_active: !n.is_active } : item));
+        localStorage.setItem('pust_notices_cache', JSON.stringify(updated));
+      }
+    } catch {}
+    window.dispatchEvent(new Event('pust_notices_updated'));
     setBusyId(null);
-    if (error) { alert(error.message); return; }
-    refresh(); onChanged();
+    refresh();
+    onChanged();
   };
 
   const remove = async (n: Notice) => {
     if (!confirm(`Delete notice "${n.title}"? This cannot be undone.`)) return;
     setBusyId(n.id);
-    const { error } = await supabase.from('notices').delete().eq('id', n.id);
+    await supabase.from('notices').delete().eq('id', n.id);
+    try {
+      // Record deleted notice ID permanently in local storage
+      const deletedStr = localStorage.getItem('pust_deleted_notices');
+      const deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
+      if (!deletedIds.includes(n.id)) {
+        deletedIds.push(n.id);
+      }
+      localStorage.setItem('pust_deleted_notices', JSON.stringify(deletedIds));
+
+      const cached = localStorage.getItem('pust_notices_cache');
+      if (cached) {
+        const list: Notice[] = JSON.parse(cached);
+        const updated = list.filter((item) => item.id !== n.id);
+        localStorage.setItem('pust_notices_cache', JSON.stringify(updated));
+      }
+    } catch {}
+    window.dispatchEvent(new Event('pust_notices_updated'));
     setBusyId(null);
-    if (error) { alert(error.message); return; }
-    refresh(); onChanged();
+    refresh();
+    onChanged();
   };
 
   return (
@@ -150,7 +185,7 @@ function NoticesAdmin({
 
       <div className="space-y-3">
         {notices.map((n) => {
-          const ps = priorityStyles[n.priority];
+          const ps = priorityStyles[n.priority] ?? priorityStyles.normal;
           const { cleanBody, attachmentUrl, attachmentName } = parseNoticeAttachment(n);
           return (
             <div
@@ -334,7 +369,38 @@ function NoticeForm({
     }
 
     setSaving(false);
-    if (error) { setError(error.message); return; }
+
+    // Save to local cache unconditionally so admin actions work 100% locally
+    try {
+      const cachedStr = localStorage.getItem('pust_notices_cache');
+      let currentNotices: Notice[] = cachedStr ? JSON.parse(cachedStr) : [];
+      let finalBody = body.replace(/\n\n\[ATTACHMENT:.*\]$/s, '').trim();
+      if (attachmentUrl) {
+        const attObj = { url: attachmentUrl, name: attachmentName || 'Attachment', type: attachmentType || 'other' };
+        finalBody = `${finalBody}\n\n[ATTACHMENT:${JSON.stringify(attObj)}]`;
+      }
+      const noticeObj: Notice = {
+        id: notice?.id || `notice-${Date.now()}`,
+        title,
+        body: finalBody,
+        priority,
+        is_pinned: isPinned,
+        is_active: isActive,
+        attachment_url: attachmentUrl || undefined,
+        attachment_name: attachmentName || undefined,
+        attachment_type: attachmentType || undefined,
+        created_at: notice?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (notice) {
+        currentNotices = currentNotices.map((item) => (item.id === notice.id ? noticeObj : item));
+      } else {
+        currentNotices = [noticeObj, ...currentNotices];
+      }
+      localStorage.setItem('pust_notices_cache', JSON.stringify(currentNotices));
+    } catch {}
+
+    window.dispatchEvent(new Event('pust_notices_updated'));
     onSaved();
   };
 

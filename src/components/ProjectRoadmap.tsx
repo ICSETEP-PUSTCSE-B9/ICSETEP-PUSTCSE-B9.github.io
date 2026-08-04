@@ -1,4 +1,5 @@
 import { CheckCircle, Clock, Calendar, Sparkles } from 'lucide-react';
+import { getAssetUrl } from '@/lib/utils';
 
 interface Phase {
   number: number;
@@ -12,11 +13,11 @@ interface Phase {
 const phases: Phase[] = [
   {
     number: 1,
-    title: 'Project Inception & Procurement',
+    title: 'Project Inception',
     duration: 'Months 1 – 4',
     status: 'completed',
-    description: 'Grant agreement signing, eGP procurement setup, laboratory infrastructure establishment, and ethics approvals.',
-    deliverables: ['First eGP Contract Signing', 'Lab Setup at Dept. of CSE, PUST', 'Procurement of Optical Hardware'],
+    description: 'Grant agreement signing, project inception program, laboratory infrastructure establishment, and ethics approvals.',
+    deliverables: ['Inception Ceremony & Orientation', 'Lab Setup at Dept. of CSE, PUST', 'Initial Optical Hardware Planning'],
   },
   {
     number: 2,
@@ -65,7 +66,7 @@ export default function ProjectRoadmap() {
             5-Phase Project Milestones (2026–2027)
           </h2>
           <p className="mt-2 text-base text-ink-600">
-            Comprehensive timeline mapping the journey from hardware procurement to AI model validation and farmer field deployment.
+            Comprehensive timeline mapping the journey from project inception to AI model validation and farmer field deployment.
           </p>
         </div>
 
@@ -99,7 +100,7 @@ export default function ProjectRoadmap() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
                       <h3 className="font-display text-lg font-bold text-ink-900">
@@ -132,6 +133,32 @@ export default function ProjectRoadmap() {
                   <p className="mt-2 text-sm leading-relaxed text-ink-600">
                     {phase.description}
                   </p>
+
+                  {/* Static Inception Images for Phase 1 */}
+                  {phase.number === 1 && (
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="overflow-hidden rounded-xl border border-ink-200 bg-ink-100 shadow-sm group">
+                        <img
+                          src={getAssetUrl('team/projectinception1.jpg')}
+                          alt="Project Inception Program"
+                          className="h-64 sm:h-72 md:h-80 w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="bg-white p-2.5 text-center text-xs font-semibold text-ink-800 border-t border-ink-100">
+                          Project Inception Program
+                        </div>
+                      </div>
+                      <div className="overflow-hidden rounded-xl border border-ink-200 bg-ink-100 shadow-sm group">
+                        <img
+                          src={getAssetUrl('team/projectinception2.jpg')}
+                          alt="Inception Discussion & Planning"
+                          className="h-64 sm:h-72 md:h-80 w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="bg-white p-2.5 text-center text-xs font-semibold text-ink-800 border-t border-ink-100">
+                          Inception Orientation & Planning
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mt-4 flex flex-wrap items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-ink-400">Key Deliverables:</span>

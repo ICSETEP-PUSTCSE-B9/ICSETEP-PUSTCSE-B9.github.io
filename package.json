@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://abu-johab.github.io/ICSETEP-B9",
+  "homepage": "https://ICSETEP-PUSTCSE-B9.github.io",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

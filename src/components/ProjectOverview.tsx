@@ -12,7 +12,7 @@ const metricIcons = [Layers, Wallet, CalendarDays, Users];
 const defaultProjectInfo: ProjectInfo = {
   id: 1,
   title: 'ICSETEP-PUSTCSE-B9',
-  tagline: 'Smart, Affordable, and Sustainable Agro-Tech Transformation in Bangladesh',
+  tagline: 'Smart, Affordable, and Sustainable Agro-Tech Transformation in Bangladesh is a flagship research initiative under the Improving Computer and Software Engineering Tertiary Education Project',
   description: 'Advancing intelligent agricultural technologies by integrating Explainable Artificial Intelligence (XAI), Deep Learning, and Hyperspectral Imaging for non-destructive agricultural product assessment.',
   status: 'In Progress',
   status_color: 'green',
@@ -30,8 +30,8 @@ const defaultProjectInfo: ProjectInfo = {
 export default function ProjectOverview({ info }: Props) {
   const activeInfo = info ?? defaultProjectInfo;
   const displayTitle = activeInfo.title && activeInfo.title !== 'Demo Project Title' ? activeInfo.title : 'ICSETEP-PUSTCSE-B9';
-  const displayTagline = (!activeInfo.tagline || activeInfo.tagline === 'HSI-Reconst-Quality assessment' || activeInfo.tagline.includes('Flagship Research Initiative'))
-    ? 'Smart, Affordable, and Sustainable Agro-Tech Transformation in Bangladesh'
+  const displayTagline = (!activeInfo.tagline || activeInfo.tagline.trim() === 'Smart, Affordable, and Sustainable Agro-Tech Transformation in Bangladesh' || activeInfo.tagline === 'HSI-Reconst-Quality assessment')
+    ? 'Smart, Affordable, and Sustainable Agro-Tech Transformation in Bangladesh is a flagship research initiative under the Improving Computer and Software Engineering Tertiary Education Project'
     : activeInfo.tagline;
 
   const sc = getStatusColor(activeInfo.status_color);
@@ -70,7 +70,7 @@ export default function ProjectOverview({ info }: Props) {
       <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-200/40 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl px-4 pt-14 pb-16 sm:px-6 sm:pt-20">
-        <div className="max-w-3xl">
+        <div className="w-full">
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${sc.bg} ${sc.text} ${sc.ring}`}
@@ -86,10 +86,10 @@ export default function ProjectOverview({ info }: Props) {
           <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-ink-900 sm:text-5xl">
             {displayTitle}
           </h1>
-          <p className="mt-3 text-lg font-bold text-brand-600 sm:text-xl">
+          <p className="mt-3 text-lg font-bold text-brand-600 sm:text-xl leading-snug">
             {displayTagline}
           </p>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-500">
+          <p className="mt-4 max-w-4xl text-base leading-relaxed text-ink-500">
             {activeInfo.description}
           </p>
         </div>

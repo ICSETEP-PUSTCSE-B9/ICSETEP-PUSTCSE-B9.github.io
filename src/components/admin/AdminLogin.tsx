@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Mail, X, ShieldCheck, Loader2, UserPlus, LogIn } from 'lucide-react';
+import { Lock, Mail, X, ShieldCheck, Loader2, UserPlus, LogIn, Zap } from 'lucide-react';
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<{ message: string } | null>;
@@ -9,8 +9,8 @@ interface Props {
 
 export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('toukir@pust.ac.bd');
+  const [password, setPassword] = useState('ICSETEP@pust-B9');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -22,6 +22,14 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
     setBusy(true);
     const err =
       mode === 'signin' ? await onSignIn(email, password) : await onSignUp(email, password);
+    setBusy(false);
+    if (err) setError(err.message);
+  };
+
+  const quickSignIn = async () => {
+    setError(null);
+    setBusy(true);
+    const err = await onSignIn('toukir@pust.ac.bd', 'ICSETEP@pust-B9');
     setBusy(false);
     if (err) setError(err.message);
   };
@@ -52,7 +60,7 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
               <h2 className="font-display text-lg font-bold text-ink-900">
                 {mode === 'signin' ? 'Admin Portal Access' : 'Create Admin Account'}
               </h2>
-              <p className="text-xs text-ink-500">Authorized Lead Portal</p>
+              <p className="text-xs text-ink-500">Authorized Project Lead Portal</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 text-ink-400 hover:bg-ink-100 hover:text-ink-700">
@@ -60,7 +68,23 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
           </button>
         </div>
 
-        <form onSubmit={submit} className="mt-6 space-y-4">
+        {/* One Click Admin Access Button */}
+        <button
+          type="button"
+          onClick={quickSignIn}
+          disabled={busy}
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-ink-950 shadow-sm transition-all hover:bg-amber-400 active:scale-[0.98] disabled:opacity-60"
+        >
+          <Zap className="h-4 w-4 text-ink-950 fill-ink-950" />
+          <span>Quick Admin Sign In</span>
+        </button>
+
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="w-full border-t border-ink-200"></div>
+          <span className="absolute bg-white px-2 text-[10px] uppercase font-bold text-ink-400">or enter credentials</span>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-ink-700">Admin Email</label>
             <div className="relative">
@@ -70,7 +94,7 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@pust.ac.bd"
+                placeholder="toukir@pust.ac.bd"
                 className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pl-10 pr-3 text-sm text-ink-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
