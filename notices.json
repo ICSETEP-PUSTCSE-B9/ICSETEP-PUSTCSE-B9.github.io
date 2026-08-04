@@ -1,15 +1,13 @@
 [
   {
-    "id": "1b6d894d-a9dd-44b4-baa6-1fe32e272386",
-    "title": "This is dummy notice.",
-    "body": "\n\n[ATTACHMENT:{\"url\":\"https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/uploads/1785868095089_Highlights.pdf\",\"name\":\"Highlights.pdf\",\"type\":\"pdf\"}]",
+    "id": "2c23c5ae-dc27-4df7-ab9c-121aa3db5427",
+    "title": "ldknw",
+    "body": "cm",
     "priority": "normal",
     "is_pinned": false,
     "is_active": true,
-    "attachment_url": "https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/uploads/1785868095089_Highlights.pdf",
-    "attachment_name": "Highlights.pdf",
-    "attachment_type": "pdf",
-    "created_at": "2026-08-04T18:28:19.399Z",
-    "updated_at": "2026-08-04T18:28:19.399Z"
+    "attachment_type": "other",
+    "created_at": "2026-08-04T18:28:47.715Z",
+    "updated_at": "2026-08-04T18:28:47.715Z"
   }
 ]
