@@ -137,8 +137,8 @@ export default function ImageSlider({ images = defaultImages }: ImageSliderProps
                 key={index}
                 onClick={() => setCurrentIndex(index)}
                 className={`h-3 rounded-full transition-all duration-300 ${isActive
-                    ? 'w-8 bg-white shadow-lg'
-                    : 'w-3 bg-white/50 hover:bg-white/80'
+                  ? 'w-8 bg-white shadow-lg'
+                  : 'w-3 bg-white/50 hover:bg-white/80'
                   }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
