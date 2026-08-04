@@ -143,7 +143,9 @@ export function useNotices() {
       });
 
       setData(merged);
-      localStorage.setItem('pust_notices_cache', JSON.stringify(merged));
+      if (merged.length > 0) {
+        localStorage.setItem('pust_notices_cache', JSON.stringify(merged));
+      }
     } catch (e: any) {
       if (data.length === 0) setError(e.message || 'Failed to load notices.');
     } finally {
@@ -156,9 +158,7 @@ export function useNotices() {
 
     const handleUpdate = () => {
       const current = loadNotices();
-      if (current.length > 0) {
-        setData(current);
-      }
+      setData(current);
     };
 
     window.addEventListener('pust_notices_updated', handleUpdate);

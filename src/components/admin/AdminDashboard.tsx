@@ -467,6 +467,48 @@ function NoticeForm({
     setError(null);
 
     const noticeId = (notice?.id && notice.id.length === 36) ? notice.id : generateUUID();
+    let finalBody = body.replace(/\n\n\[ATTACHMENT:.*\]$/s, '').trim();
+    if (attachmentUrl) {
+      const attObj = { url: attachmentUrl, name: attachmentName || 'Attachment', type: attachmentType || 'other' };
+      finalBody = `${finalBody}\n\n[ATTACHMENT:${JSON.stringify(attObj)}]`;
+    }
+
+    const noticeObj: Notice = {
+      id: noticeId,
+      title,
+      body: finalBody,
+      priority,
+      is_pinned: isPinned,
+      is_active: isActive,
+      attachment_url: attachmentUrl || undefined,
+      attachment_name: attachmentName || undefined,
+      attachment_type: attachmentType || undefined,
+      created_at: notice?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // 1. INSTANT LOCAL UPDATE: Update local storage and UI immediately
+    let updatedNoticesList: Notice[] = [];
+    try {
+      const deletedStr = localStorage.getItem('pust_deleted_notices');
+      let deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
+      deletedIds = deletedIds.filter((id) => id !== noticeId);
+      localStorage.setItem('pust_deleted_notices', JSON.stringify(deletedIds));
+
+      const cachedStr = localStorage.getItem('pust_notices_cache');
+      let currentNotices: Notice[] = cachedStr ? JSON.parse(cachedStr) : [];
+      if (notice) {
+        currentNotices = currentNotices.map((item) => (item.id === notice.id ? noticeObj : item));
+      } else {
+        currentNotices = [noticeObj, ...currentNotices.filter((item) => item.id !== noticeId)];
+      }
+      updatedNoticesList = currentNotices;
+      localStorage.setItem('pust_notices_cache', JSON.stringify(currentNotices));
+    } catch { }
+
+    window.dispatchEvent(new Event('pust_notices_updated'));
+
+    // 2. REMOTE DB SYNC: Push to Supabase Cloud DB
     const fullInput: any = {
       id: noticeId,
       title,
@@ -480,87 +522,21 @@ function NoticeForm({
       created_at: notice?.created_at || new Date().toISOString(),
     };
 
-    let { error } = await (notice
-      ? supabase.from('notices').update(fullInput).eq('id', notice.id)
-      : supabase.from('notices').insert(fullInput));
-
-    // If remote DB lacks attachment columns, embed attachment into body seamlessly
-    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
-      let cleanBody = body.replace(/\n\n\[ATTACHMENT:.*\]$/s, '').trim();
-
-      if (attachmentUrl) {
-        const attObj = {
-          url: attachmentUrl,
-          name: attachmentName || 'Attachment',
-          type: attachmentType || 'other',
-        };
-        cleanBody = `${cleanBody}\n\n[ATTACHMENT:${JSON.stringify(attObj)}]`;
-      }
-
-      const fallbackInput = {
-        id: noticeId,
-        title,
-        body: cleanBody,
-        priority,
-        is_pinned: isPinned,
-        is_active: isActive,
-        created_at: notice?.created_at || new Date().toISOString(),
-      };
-
-      const fallbackRes = await (notice
-        ? supabase.from('notices').update(fallbackInput).eq('id', notice.id)
-        : supabase.from('notices').insert(fallbackInput));
-
-      error = fallbackRes.error;
+    try {
+      await (notice
+        ? supabase.from('notices').update(fullInput).eq('id', notice.id)
+        : supabase.from('notices').insert(fullInput));
+    } catch (e) {
+      // ignore remote DB error
     }
 
-    setSaving(false);
-
-    // Save to local cache unconditionally so admin actions work 100% locally
-    let updatedNoticesList: Notice[] = [];
-    try {
-      // Remove from deleted list if re-added
-      const deletedStr = localStorage.getItem('pust_deleted_notices');
-      let deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
-      deletedIds = deletedIds.filter((id) => id !== noticeId);
-      localStorage.setItem('pust_deleted_notices', JSON.stringify(deletedIds));
-
-      const cachedStr = localStorage.getItem('pust_notices_cache');
-      let currentNotices: Notice[] = cachedStr ? JSON.parse(cachedStr) : [];
-      let finalBody = body.replace(/\n\n\[ATTACHMENT:.*\]$/s, '').trim();
-      if (attachmentUrl) {
-        const attObj = { url: attachmentUrl, name: attachmentName || 'Attachment', type: attachmentType || 'other' };
-        finalBody = `${finalBody}\n\n[ATTACHMENT:${JSON.stringify(attObj)}]`;
-      }
-      const noticeObj: Notice = {
-        id: noticeId,
-        title,
-        body: finalBody,
-        priority,
-        is_pinned: isPinned,
-        is_active: isActive,
-        attachment_url: attachmentUrl || undefined,
-        attachment_name: attachmentName || undefined,
-        attachment_type: attachmentType || undefined,
-        created_at: notice?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      if (notice) {
-        currentNotices = currentNotices.map((item) => (item.id === notice.id ? noticeObj : item));
-      } else {
-        currentNotices = [noticeObj, ...currentNotices.filter((item) => item.id !== noticeId)];
-      }
-      updatedNoticesList = currentNotices;
-      localStorage.setItem('pust_notices_cache', JSON.stringify(currentNotices));
-    } catch { }
-
-    // Auto-sync to GitHub repo if PAT token is configured in localStorage
+    // 3. GITHUB SYNC: Push to GitHub repo if PAT token is configured
     const githubToken = localStorage.getItem('pust_github_token');
     if (githubToken && updatedNoticesList.length > 0) {
       pushNoticesToGitHub(updatedNoticesList, githubToken).catch(() => {});
     }
 
-    window.dispatchEvent(new Event('pust_notices_updated'));
+    setSaving(false);
     onSaved();
   };
 
