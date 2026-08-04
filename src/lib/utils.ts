@@ -109,4 +109,43 @@ export const attachmentMeta = {
     iconBg: 'bg-ink-100 text-ink-600',
   },
 };
+export function parseNoticeAttachment(notice: {
+  body?: string;
+  attachment_url?: string;
+  attachment_name?: string;
+  attachment_type?: 'pdf' | 'word' | 'excel' | 'image' | 'other';
+}): {
+  cleanBody: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentType: 'pdf' | 'word' | 'excel' | 'image' | 'other';
+} {
+  let cleanBody = notice.body || '';
+  let attachmentUrl = notice.attachment_url;
+  let attachmentName = notice.attachment_name;
+  let attachmentType = notice.attachment_type;
+
+  const match = cleanBody.match(/\n\n\[ATTACHMENT:(.*)\]$/s);
+  if (match) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      attachmentUrl = attachmentUrl || parsed.url;
+      attachmentName = attachmentName || parsed.name;
+      attachmentType = attachmentType || parsed.type;
+      cleanBody = cleanBody.replace(/\n\n\[ATTACHMENT:.*\]$/s, '').trim();
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const finalType = attachmentType || (attachmentName ? detectAttachmentType(attachmentName) : 'other');
+
+  return {
+    cleanBody,
+    attachmentUrl: attachmentUrl || undefined,
+    attachmentName: attachmentName || undefined,
+    attachmentType: finalType,
+  };
+}
+
 

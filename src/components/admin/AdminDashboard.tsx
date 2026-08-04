@@ -143,6 +143,7 @@ function NoticesAdmin({
       <div className="space-y-3">
         {notices.map((n) => {
           const ps = priorityStyles[n.priority];
+          const { cleanBody, attachmentUrl, attachmentName } = parseNoticeAttachment(n);
           return (
             <div
               key={n.id}
@@ -166,14 +167,14 @@ function NoticesAdmin({
                         Hidden
                       </span>
                     )}
-                    {n.attachment_url && (
+                    {attachmentUrl && (
                       <span className="flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-200">
-                        <Paperclip className="h-3 w-3" /> {n.attachment_name || 'Attachment'}
+                        <Paperclip className="h-3 w-3" /> {attachmentName || 'Attachment'}
                       </span>
                     )}
                   </div>
                   <h3 className="mt-2 font-semibold text-ink-900">{n.title}</h3>
-                  <p className="mt-1 line-clamp-2 text-sm text-ink-500">{n.body}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-ink-500">{cleanBody}</p>
                   <p className="mt-2 text-xs text-ink-400">{formatDate(n.created_at)}</p>
                 </div>
                 <div className="flex shrink-0 flex-col gap-1.5">
@@ -235,14 +236,15 @@ function NoticeForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const initialParsed = notice ? parseNoticeAttachment(notice) : null;
   const [title, setTitle] = useState(notice?.title ?? '');
-  const [body, setBody] = useState(notice?.body ?? '');
+  const [body, setBody] = useState(initialParsed ? initialParsed.cleanBody : (notice?.body ?? ''));
   const [priority, setPriority] = useState<Priority>(notice?.priority ?? 'normal');
   const [isPinned, setIsPinned] = useState(notice?.is_pinned ?? false);
   const [isActive, setIsActive] = useState(notice?.is_active ?? true);
-  const [attachmentUrl, setAttachmentUrl] = useState(notice?.attachment_url ?? '');
-  const [attachmentName, setAttachmentName] = useState(notice?.attachment_name ?? '');
-  const [attachmentType, setAttachmentType] = useState<AttachmentType>(notice?.attachment_type ?? 'other');
+  const [attachmentUrl, setAttachmentUrl] = useState(initialParsed?.attachmentUrl ?? notice?.attachment_url ?? '');
+  const [attachmentName, setAttachmentName] = useState(initialParsed?.attachmentName ?? notice?.attachment_name ?? '');
+  const [attachmentType, setAttachmentType] = useState<AttachmentType>(initialParsed?.attachmentType ?? notice?.attachment_type ?? 'other');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -279,20 +281,50 @@ function NoticeForm({
   const save = async () => {
     setSaving(true);
     setError(null);
-    const input: NoticeInput = {
+
+    const fullInput: any = {
       title,
       body,
       priority,
       is_pinned: isPinned,
       is_active: isActive,
-      attachment_url: attachmentUrl || undefined,
-      attachment_name: attachmentName || undefined,
-      attachment_type: attachmentType || undefined,
+      attachment_url: attachmentUrl || null,
+      attachment_name: attachmentName || null,
+      attachment_type: attachmentType || null,
     };
-    const op = notice
-      ? supabase.from('notices').update(input).eq('id', notice.id)
-      : supabase.from('notices').insert(input);
-    const { error } = await op;
+
+    let { error } = await (notice
+      ? supabase.from('notices').update(fullInput).eq('id', notice.id)
+      : supabase.from('notices').insert(fullInput));
+
+    // If remote DB lacks attachment columns, embed attachment into body seamlessly
+    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+      let cleanBody = body.replace(/\n\n\[ATTACHMENT:.*\]$/s, '').trim();
+
+      if (attachmentUrl) {
+        const attObj = {
+          url: attachmentUrl,
+          name: attachmentName || 'Attachment',
+          type: attachmentType || 'other',
+        };
+        cleanBody = `${cleanBody}\n\n[ATTACHMENT:${JSON.stringify(attObj)}]`;
+      }
+
+      const fallbackInput = {
+        title,
+        body: cleanBody,
+        priority,
+        is_pinned: isPinned,
+        is_active: isActive,
+      };
+
+      const fallbackRes = await (notice
+        ? supabase.from('notices').update(fallbackInput).eq('id', notice.id)
+        : supabase.from('notices').insert(fallbackInput));
+
+      error = fallbackRes.error;
+    }
+
     setSaving(false);
     if (error) { setError(error.message); return; }
     onSaved();

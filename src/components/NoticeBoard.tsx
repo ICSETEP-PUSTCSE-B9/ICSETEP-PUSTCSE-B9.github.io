@@ -1,6 +1,6 @@
 import { Pin, BellOff, Clock, FileText, FileSpreadsheet, Image as ImageIcon, File, Download, ExternalLink, Paperclip } from 'lucide-react';
 import type { Notice, AttachmentType } from '@/lib/types';
-import { priorityStyles, relativeTime, formatDate, attachmentMeta, detectAttachmentType } from '@/lib/utils';
+import { priorityStyles, relativeTime, formatDate, attachmentMeta, parseNoticeAttachment } from '@/lib/utils';
 
 interface Props {
   notices: Notice[];
@@ -39,15 +39,15 @@ export default function NoticeBoard({ notices }: Props) {
           <div className="grid gap-6 md:grid-cols-2">
             {active.map((n, i) => {
               const ps = priorityStyles[n.priority] ?? priorityStyles.normal;
-              const hasAttachment = Boolean(n.attachment_url);
-              const attType: AttachmentType = n.attachment_type || (n.attachment_name ? detectAttachmentType(n.attachment_name) : 'other');
-              const meta = attachmentMeta[attType] || attachmentMeta.other;
+              const { cleanBody, attachmentUrl, attachmentName, attachmentType } = parseNoticeAttachment(n);
+              const hasAttachment = Boolean(attachmentUrl);
+              const meta = attachmentMeta[attachmentType] || attachmentMeta.other;
 
               let FileIcon = File;
-              if (attType === 'pdf') FileIcon = FileText;
-              else if (attType === 'word') FileIcon = FileText;
-              else if (attType === 'excel') FileIcon = FileSpreadsheet;
-              else if (attType === 'image') FileIcon = ImageIcon;
+              if (attachmentType === 'pdf') FileIcon = FileText;
+              else if (attachmentType === 'word') FileIcon = FileText;
+              else if (attachmentType === 'excel') FileIcon = FileSpreadsheet;
+              else if (attachmentType === 'image') FileIcon = ImageIcon;
 
               return (
                 <article
@@ -72,22 +72,22 @@ export default function NoticeBoard({ notices }: Props) {
                   <h3 className="mt-3 pr-20 font-display text-lg font-bold text-ink-900">
                     {n.title}
                   </h3>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-600 whitespace-pre-line">{n.body}</p>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-600 whitespace-pre-line">{cleanBody}</p>
 
                   {/* Attachment Section */}
-                  {hasAttachment && (
+                  {hasAttachment && attachmentUrl && (
                     <div className="mt-4">
-                      {attType === 'image' ? (
+                      {attachmentType === 'image' ? (
                         <div className="overflow-hidden rounded-xl border border-ink-200 bg-ink-50">
                           <a
-                            href={n.attachment_url}
+                            href={attachmentUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="group/img relative block overflow-hidden"
                           >
                             <img
-                              src={n.attachment_url}
-                              alt={n.attachment_name || n.title}
+                              src={attachmentUrl}
+                              alt={attachmentName || n.title}
                               className="max-h-64 w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-ink-950/40 opacity-0 transition-opacity group-hover/img:opacity-100">
@@ -96,12 +96,12 @@ export default function NoticeBoard({ notices }: Props) {
                               </span>
                             </div>
                           </a>
-                          {n.attachment_name && (
+                          {attachmentName && (
                             <div className="flex items-center justify-between border-t border-ink-100 bg-white px-3 py-2 text-xs text-ink-600">
-                              <span className="truncate font-medium max-w-[200px] sm:max-w-[280px]">{n.attachment_name}</span>
+                              <span className="truncate font-medium max-w-[200px] sm:max-w-[280px]">{attachmentName}</span>
                               <a
-                                href={n.attachment_url}
-                                download={n.attachment_name}
+                                href={attachmentUrl}
+                                download={attachmentName}
                                 className="flex items-center gap-1 font-semibold text-brand-600 hover:text-brand-700"
                               >
                                 <Download className="h-3.5 w-3.5" /> Download
@@ -117,7 +117,7 @@ export default function NoticeBoard({ notices }: Props) {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-semibold text-ink-900">
-                                {n.attachment_name || 'Attached File'}
+                                {attachmentName || 'Attached File'}
                               </p>
                               <span className={`inline-block mt-0.5 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${meta.badge}`}>
                                 {meta.label}
@@ -125,10 +125,10 @@ export default function NoticeBoard({ notices }: Props) {
                             </div>
                           </div>
                           <a
-                            href={n.attachment_url}
+                            href={attachmentUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            download={n.attachment_name || true}
+                            download={attachmentName || true}
                             className="ml-3 flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 shadow-sm ring-1 ring-inset ring-ink-200 hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-300 transition-all"
                           >
                             <Download className="h-3.5 w-3.5" />
