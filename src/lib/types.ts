@@ -18,6 +18,8 @@ export interface ProjectInfo {
   updated_at: string;
 }
 
+export type AttachmentType = 'pdf' | 'word' | 'excel' | 'image' | 'other';
+
 export interface Notice {
   id: string;
   title: string;
@@ -25,6 +27,9 @@ export interface Notice {
   priority: Priority;
   is_pinned: boolean;
   is_active: boolean;
+  attachment_url?: string;
+  attachment_name?: string;
+  attachment_type?: AttachmentType;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +63,9 @@ export interface NoticeInput {
   priority: Priority;
   is_pinned: boolean;
   is_active: boolean;
+  attachment_url?: string;
+  attachment_name?: string;
+  attachment_type?: AttachmentType;
 }
 
 export interface UpdateInput {

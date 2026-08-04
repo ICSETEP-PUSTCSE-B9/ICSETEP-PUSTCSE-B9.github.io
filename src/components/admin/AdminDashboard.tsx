@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNotices, useUpdates } from '@/lib/hooks';
-import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority } from '@/lib/types';
-import { priorityStyles, formatDate } from '@/lib/utils';
-import { X, Megaphone, History, Plus, Pencil, Trash2, Pin, PinOff, Loader2, Save } from 'lucide-react';
+import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority, AttachmentType } from '@/lib/types';
+import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta } from '@/lib/utils';
+import { X, Megaphone, History, Plus, Pencil, Trash2, Pin, PinOff, Loader2, Save, Paperclip, Upload, FileText, FileSpreadsheet, Image as ImageIcon, File } from 'lucide-react';
 
 interface Props {
   onSignOut: () => void;
@@ -166,6 +166,11 @@ function NoticesAdmin({
                         Hidden
                       </span>
                     )}
+                    {n.attachment_url && (
+                      <span className="flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-200">
+                        <Paperclip className="h-3 w-3" /> {n.attachment_name || 'Attachment'}
+                      </span>
+                    )}
                   </div>
                   <h3 className="mt-2 font-semibold text-ink-900">{n.title}</h3>
                   <p className="mt-1 line-clamp-2 text-sm text-ink-500">{n.body}</p>
@@ -235,13 +240,55 @@ function NoticeForm({
   const [priority, setPriority] = useState<Priority>(notice?.priority ?? 'normal');
   const [isPinned, setIsPinned] = useState(notice?.is_pinned ?? false);
   const [isActive, setIsActive] = useState(notice?.is_active ?? true);
+  const [attachmentUrl, setAttachmentUrl] = useState(notice?.attachment_url ?? '');
+  const [attachmentName, setAttachmentName] = useState(notice?.attachment_name ?? '');
+  const [attachmentType, setAttachmentType] = useState<AttachmentType>(notice?.attachment_type ?? 'other');
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const fileName = file.name;
+    const detected = detectAttachmentType(fileName, file.type);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setAttachmentUrl(result);
+      setAttachmentName(fileName);
+      setAttachmentType(detected);
+      setUploading(false);
+    };
+    reader.onerror = () => {
+      setError('Failed to read selected file.');
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAttachment = () => {
+    setAttachmentUrl('');
+    setAttachmentName('');
+    setAttachmentType('other');
+  };
 
   const save = async () => {
     setSaving(true);
     setError(null);
-    const input: NoticeInput = { title, body, priority, is_pinned: isPinned, is_active: isActive };
+    const input: NoticeInput = {
+      title,
+      body,
+      priority,
+      is_pinned: isPinned,
+      is_active: isActive,
+      attachment_url: attachmentUrl || undefined,
+      attachment_name: attachmentName || undefined,
+      attachment_type: attachmentType || undefined,
+    };
     const op = notice
       ? supabase.from('notices').update(input).eq('id', notice.id)
       : supabase.from('notices').insert(input);
@@ -251,9 +298,11 @@ function NoticeForm({
     onSaved();
   };
 
+  const meta = attachmentMeta[attachmentType] || attachmentMeta.other;
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink-950/50 p-4 animate-fade-in">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl animate-scale-in">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl animate-scale-in">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-lg font-bold text-ink-900">
             {notice ? 'Edit Notice' : 'New Notice'}
@@ -264,10 +313,10 @@ function NoticeForm({
         </div>
         <div className="space-y-4">
           <Field label="Title">
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} placeholder="Notice Title" />
           </Field>
-          <Field label="Body">
-            <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} className={inputCls} />
+          <Field label="Body / Description">
+            <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} className={inputCls} placeholder="Notice details and message..." />
           </Field>
           <Field label="Priority">
             <select value={priority} onChange={(e) => setPriority(e.target.value as Priority)} className={inputCls}>
@@ -276,7 +325,92 @@ function NoticeForm({
               <option value="high">High Priority</option>
             </select>
           </Field>
-          <div className="flex gap-4">
+
+          {/* Attachment Upload & Management */}
+          <div className="rounded-xl border border-ink-200 bg-ink-50/50 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <label className="flex items-center gap-1.5 text-sm font-semibold text-ink-800">
+                <Paperclip className="h-4 w-4 text-brand-600" />
+                Attachment (PDF, Word, Excel, Image)
+              </label>
+              {attachmentUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAttachment}
+                  className="text-xs font-semibold text-red-600 hover:text-red-700"
+                >
+                  Remove File
+                </button>
+              )}
+            </div>
+
+            {attachmentUrl ? (
+              <div className="flex items-center gap-3 rounded-lg border border-ink-200 bg-white p-3">
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${meta.iconBg}`}>
+                  {attachmentType === 'pdf' || attachmentType === 'word' ? (
+                    <FileText className="h-4 w-4" />
+                  ) : attachmentType === 'excel' ? (
+                    <FileSpreadsheet className="h-4 w-4" />
+                  ) : attachmentType === 'image' ? (
+                    <ImageIcon className="h-4 w-4" />
+                  ) : (
+                    <File className="h-4 w-4" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-semibold text-ink-900">{attachmentName || 'Attached File'}</p>
+                  <span className={`inline-block mt-0.5 rounded px-1.5 py-0.2 text-[9px] font-bold uppercase ${meta.badge}`}>
+                    {meta.label}
+                  </span>
+                </div>
+                {attachmentType === 'image' && (
+                  <img src={attachmentUrl} alt="preview" className="h-10 w-10 shrink-0 rounded object-cover border" />
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <label className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-ink-300 bg-white p-4 text-center cursor-pointer hover:border-brand-500 hover:bg-brand-50/30 transition-colors">
+                  <Upload className="h-6 w-6 text-brand-600 mb-1" />
+                  <span className="text-xs font-semibold text-ink-800">
+                    {uploading ? 'Reading file...' : 'Click to Upload PDF, Word, Excel, or Image'}
+                  </span>
+                  <span className="text-[11px] text-ink-400 mt-0.5">
+                    Supports .pdf, .doc, .docx, .xls, .xlsx, .csv, .png, .jpg, .webp
+                  </span>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.webp"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                </label>
+                
+                <div className="relative flex items-center justify-center">
+                  <div className="w-full border-t border-ink-200"></div>
+                  <span className="absolute bg-ink-50/50 px-2 text-[10px] uppercase font-bold text-ink-400">or enter file URL</span>
+                </div>
+
+                <input
+                  type="url"
+                  placeholder="https://example.com/document.pdf"
+                  value={attachmentUrl}
+                  onChange={(e) => {
+                    const url = e.target.value;
+                    setAttachmentUrl(url);
+                    if (url) {
+                      const filename = url.split('/').pop() || 'File Attachment';
+                      setAttachmentName(filename);
+                      setAttachmentType(detectAttachmentType(filename));
+                    }
+                  }}
+                  className={inputCls}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-4 pt-1">
             <label className="flex items-center gap-2 text-sm font-medium text-ink-700">
               <input type="checkbox" checked={isPinned} onChange={(e) => setIsPinned(e.target.checked)} className="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500" />
               Pin to sliding ticker
@@ -289,7 +423,7 @@ function NoticeForm({
           {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-inset ring-red-200">{error}</div>}
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={onClose} className="rounded-lg border border-ink-200 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-ink-50">Cancel</button>
-            <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60">
+            <button onClick={save} disabled={saving || uploading} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {saving ? 'Saving…' : 'Save'}
             </button>
