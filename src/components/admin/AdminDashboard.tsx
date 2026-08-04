@@ -458,6 +458,11 @@ function NoticeForm({
   };
 
   const save = async () => {
+    if (!title.trim()) {
+      setError('Please enter a notice title.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -514,6 +519,12 @@ function NoticeForm({
     // Save to local cache unconditionally so admin actions work 100% locally
     let updatedNoticesList: Notice[] = [];
     try {
+      // Remove from deleted list if re-added
+      const deletedStr = localStorage.getItem('pust_deleted_notices');
+      let deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
+      deletedIds = deletedIds.filter((id) => id !== noticeId);
+      localStorage.setItem('pust_deleted_notices', JSON.stringify(deletedIds));
+
       const cachedStr = localStorage.getItem('pust_notices_cache');
       let currentNotices: Notice[] = cachedStr ? JSON.parse(cachedStr) : [];
       let finalBody = body.replace(/\n\n\[ATTACHMENT:.*\]$/s, '').trim();
@@ -537,7 +548,7 @@ function NoticeForm({
       if (notice) {
         currentNotices = currentNotices.map((item) => (item.id === notice.id ? noticeObj : item));
       } else {
-        currentNotices = [noticeObj, ...currentNotices];
+        currentNotices = [noticeObj, ...currentNotices.filter((item) => item.id !== noticeId)];
       }
       updatedNoticesList = currentNotices;
       localStorage.setItem('pust_notices_cache', JSON.stringify(currentNotices));

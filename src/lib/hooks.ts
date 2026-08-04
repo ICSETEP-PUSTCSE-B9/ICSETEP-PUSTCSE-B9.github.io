@@ -114,26 +114,28 @@ export function useNotices() {
 
       const map = new Map<string, Notice>();
 
-      if (hasRemoteData && remoteNotices.length > 0) {
-        // Supabase DB is the authoritative live source across all devices
-        remoteNotices.forEach((n) => {
-          if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+      // 1. Remote notices from Supabase DB
+      remoteNotices.forEach((n) => {
+        if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+          map.set(n.id, n);
+        }
+      });
+
+      // 2. Local notices cache (ensures newly created notices show immediately)
+      localList.forEach((n) => {
+        if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+          map.set(n.id, n);
+        }
+      });
+
+      // 3. GitHub hosted notices.json fallback
+      githubNotices.forEach((n) => {
+        if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+          if (!map.has(n.id)) {
             map.set(n.id, n);
           }
-        });
-      } else {
-        // Fallback if remote DB is empty or unreachable
-        githubNotices.forEach((n) => {
-          if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
-            map.set(n.id, n);
-          }
-        });
-        localList.forEach((n) => {
-          if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
-            map.set(n.id, n);
-          }
-        });
-      }
+        }
+      });
 
       const merged = Array.from(map.values()).sort((a, b) => {
         if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
