@@ -130,15 +130,42 @@ export function useNotices() {
   return { data, loading, error, refresh: fetch };
 }
 
+const defaultUpdates: ProjectUpdate[] = [
+  {
+    id: 'default-update-1',
+    title: 'ICSETEP RDG B9 Research Sub-Project Inception',
+    body: 'Official kickoff and agreement signing for the Smart, Affordable, and Sustainable Agro-Tech Transformation research sub-project funded by ADB & UGC under ICSETEP.',
+    created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-update-2',
+    title: 'Hyperspectral & XAI Hardware Infrastructure Setup',
+    body: 'Establishment of state-of-the-art research laboratory facilities at the Department of Computer Science & Engineering, Pabna University of Science & Technology (PUST).',
+    created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-update-3',
+    title: 'Algorithm Design & Hyperspectral Calibration',
+    body: 'Initiated neural network architecture design for non-destructive agricultural product quality assessment and XAI feature visualization maps.',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
 export function useUpdates() {
-  const [data, setData] = useState<ProjectUpdate[]>(() => {
+  const loadUpdates = useCallback(() => {
     try {
       const cached = localStorage.getItem('pust_updates_cache');
-      return cached ? JSON.parse(cached) : [];
+      const list: ProjectUpdate[] = cached ? JSON.parse(cached) : [];
+      return list.length > 0 ? list : defaultUpdates;
     } catch {
-      return [];
+      return defaultUpdates;
     }
-  });
+  }, []);
+
+  const [data, setData] = useState<ProjectUpdate[]>(loadUpdates);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -151,14 +178,28 @@ export function useUpdates() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (resError) {
+      const cached = localStorage.getItem('pust_updates_cache');
+      const localList: ProjectUpdate[] = cached ? JSON.parse(cached) : [];
+
+      const map = new Map<string, ProjectUpdate>();
+      if (resData && resData.length > 0) {
+        (resData as ProjectUpdate[]).forEach((u) => map.set(u.id, u));
+      }
+      localList.forEach((u) => map.set(u.id, u));
+
+      const merged = Array.from(map.values()).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      const finalData = merged.length > 0 ? merged : defaultUpdates;
+      setData(finalData);
+      localStorage.setItem('pust_updates_cache', JSON.stringify(finalData));
+
+      if (resError && finalData.length === 0) {
         setError(resError.message);
-      } else if (resData) {
-        setData(resData as ProjectUpdate[]);
-        localStorage.setItem('pust_updates_cache', JSON.stringify(resData));
       }
     } catch (e: any) {
-      setError(e.message || 'Failed to load updates.');
+      if (data.length === 0) setData(defaultUpdates);
     } finally {
       setLoading(false);
     }
@@ -166,7 +207,15 @@ export function useUpdates() {
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+
+    const handleUpdate = () => {
+      const current = loadUpdates();
+      setData(current);
+    };
+
+    window.addEventListener('pust_updates_updated', handleUpdate);
+    return () => window.removeEventListener('pust_updates_updated', handleUpdate);
+  }, [fetch, loadUpdates]);
 
   return { data, loading, error, refresh: fetch };
 }

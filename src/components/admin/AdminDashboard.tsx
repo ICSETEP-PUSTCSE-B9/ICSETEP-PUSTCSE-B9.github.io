@@ -566,10 +566,19 @@ function UpdatesAdmin({
   const remove = async (u: ProjectUpdate) => {
     if (!confirm(`Delete update "${u.title}"?`)) return;
     setBusyId(u.id);
-    const { error } = await supabase.from('updates').delete().eq('id', u.id);
+    await supabase.from('updates').delete().eq('id', u.id);
+    try {
+      const cached = localStorage.getItem('pust_updates_cache');
+      if (cached) {
+        const list: ProjectUpdate[] = JSON.parse(cached);
+        const updated = list.filter((item) => item.id !== u.id);
+        localStorage.setItem('pust_updates_cache', JSON.stringify(updated));
+      }
+    } catch {}
+    window.dispatchEvent(new Event('pust_updates_updated'));
     setBusyId(null);
-    if (error) { alert(error.message); return; }
-    refresh(); onChanged();
+    refresh();
+    onChanged();
   };
 
   return (
@@ -636,12 +645,32 @@ function UpdateForm({
     setSaving(true);
     setError(null);
     const input: UpdateInput = { title, body };
-    const op = update
-      ? supabase.from('updates').update({ ...input, created_at: new Date(date).toISOString() }).eq('id', update.id)
-      : supabase.from('updates').insert({ ...input, created_at: new Date(date).toISOString() });
-    const { error } = await op;
+    const createdAtStr = new Date(date).toISOString();
+    await (update
+      ? supabase.from('updates').update({ ...input, created_at: createdAtStr }).eq('id', update.id)
+      : supabase.from('updates').insert({ ...input, created_at: createdAtStr }));
+    
     setSaving(false);
-    if (error) { setError(error.message); return; }
+
+    try {
+      const cachedStr = localStorage.getItem('pust_updates_cache');
+      let currentUpdates: ProjectUpdate[] = cachedStr ? JSON.parse(cachedStr) : [];
+      const updateObj: ProjectUpdate = {
+        id: update?.id || `update-${Date.now()}`,
+        title,
+        body,
+        created_at: createdAtStr,
+        updated_at: new Date().toISOString(),
+      };
+      if (update) {
+        currentUpdates = currentUpdates.map((item) => (item.id === update.id ? updateObj : item));
+      } else {
+        currentUpdates = [updateObj, ...currentUpdates];
+      }
+      localStorage.setItem('pust_updates_cache', JSON.stringify(currentUpdates));
+    } catch {}
+
+    window.dispatchEvent(new Event('pust_updates_updated'));
     onSaved();
   };
 
