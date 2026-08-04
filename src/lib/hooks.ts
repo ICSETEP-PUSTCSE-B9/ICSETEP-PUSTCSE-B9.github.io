@@ -125,10 +125,6 @@ export function useNotices() {
 
       setData(merged);
       localStorage.setItem('pust_notices_cache', JSON.stringify(merged));
-
-      if (resError && merged.length === 0) {
-        setError(resError.message);
-      }
     } catch (e: any) {
       if (data.length === 0) setError(e.message || 'Failed to load notices.');
     } finally {

@@ -148,4 +148,39 @@ export function parseNoticeAttachment(notice: {
   };
 }
 
+export async function handleDownload(url: string, filename?: string) {
+  if (!url) return;
+  const name = filename || url.split('/').pop() || 'notice_attachment';
+  if (url.startsWith('data:')) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return;
+  }
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch (e) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+}
+
+
 

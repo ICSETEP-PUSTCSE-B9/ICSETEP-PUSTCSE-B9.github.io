@@ -61,6 +61,12 @@ export default function AdminLogin({ onSignIn, onSignUp, onClose }: Props) {
           </button>
         </div>
 
+        <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50/60 p-3 text-xs text-brand-900">
+          <p className="font-bold text-brand-800">🔑 Admin Credentials:</p>
+          <p className="mt-0.5 font-mono text-[11px] text-brand-700">Email: <span className="font-bold">toukir@pust.ac.bd</span> | Pass: <span className="font-bold">admin123</span></p>
+          <p className="mt-1 text-[10px] text-ink-500">General visitors do not need to sign in; they can view all public notices and downloads directly.</p>
+        </div>
+
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-ink-700">Admin Email</label>

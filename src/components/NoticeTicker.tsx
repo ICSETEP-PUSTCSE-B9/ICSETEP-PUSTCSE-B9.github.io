@@ -45,11 +45,26 @@ export default function NoticeTicker({ notices }: Props) {
     (n) => n.is_active && !n.title.toLowerCase().includes('dummy') && !n.body.toLowerCase().includes('demo')
   );
 
-  const baseNotices = realActive.length > 0 ? [...realActive] : defaultNotices;
+  // Filter pinned notices
+  const pinnedActive = realActive.filter((n) => n.is_pinned);
 
-  // Sort: Pinned notices first, then High Priority notices, then latest created
+  // Rule: If there are pinned notices, ONLY show pinned notices in the slider!
+  // If 1 notice is pinned, only 1 is shown. If 2 notices are pinned, it slides those 2.
+  // If 0 notices are pinned, show all active notices.
+  let baseNotices: Notice[];
+  let isPinnedMode = false;
+
+  if (pinnedActive.length > 0) {
+    baseNotices = [...pinnedActive];
+    isPinnedMode = true;
+  } else if (realActive.length > 0) {
+    baseNotices = [...realActive];
+  } else {
+    baseNotices = defaultNotices;
+  }
+
+  // Sort by priority and created date
   baseNotices.sort((a, b) => {
-    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
     const pMap: Record<string, number> = { high: 0, normal: 1, low: 2 };
     const pA = pMap[a.priority] ?? 1;
     const pB = pMap[b.priority] ?? 1;
@@ -57,33 +72,46 @@ export default function NoticeTicker({ notices }: Props) {
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
-  // Multiply 16 times to guarantee 100% full screen width coverage on all monitor sizes (1080p, 1440p, 4K)
-  const items = [
-    ...baseNotices, ...baseNotices, ...baseNotices, ...baseNotices,
-    ...baseNotices, ...baseNotices, ...baseNotices, ...baseNotices,
-    ...baseNotices, ...baseNotices, ...baseNotices, ...baseNotices,
-    ...baseNotices, ...baseNotices, ...baseNotices, ...baseNotices,
-  ];
+  // Multiply to guarantee continuous scrolling marquee coverage across all screens
+  const repeatCount = Math.max(4, Math.ceil(16 / (baseNotices.length || 1)));
+  const items: Notice[] = [];
+  for (let i = 0; i < repeatCount; i++) {
+    items.push(...baseNotices);
+  }
 
-  const handleScrollToNotices = (e: React.MouseEvent) => {
+  const handleScrollToNotice = (e: React.MouseEvent, noticeId: string) => {
     e.preventDefault();
-    const el = document.getElementById('notices');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+    e.stopPropagation();
+
+    const targetEl = document.getElementById(`notice-card-${noticeId}`);
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Temporary highlight pulse effect on target notice card
+      targetEl.classList.add('ring-4', 'ring-brand-500', 'scale-[1.02]');
+      setTimeout(() => {
+        targetEl.classList.remove('ring-4', 'ring-brand-500', 'scale-[1.02]');
+      }, 2500);
     } else {
-      window.location.hash = '#notices';
+      const boardEl = document.getElementById('notices');
+      if (boardEl) boardEl.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   return (
     <div
-      onClick={handleScrollToNotices}
-      title="Click to view all notices on Notice Board"
+      onClick={(e) => {
+        if (baseNotices.length > 0) {
+          handleScrollToNotice(e, baseNotices[0].id);
+        }
+      }}
+      title="Click notice to jump to Notice Board and download/read attachments"
       className="relative z-40 flex w-full items-stretch border-b border-ink-200 bg-ink-950 text-white overflow-hidden cursor-pointer group/ticker select-none"
     >
       <div className="flex shrink-0 items-center gap-2 bg-brand-600 px-3 py-2 sm:px-4 group-hover/ticker:bg-brand-500 transition-colors">
         <Megaphone className="h-4 w-4 shrink-0 text-white" />
-        <span className="text-xs font-bold uppercase tracking-wider text-white">Notice ({baseNotices.length})</span>
+        <span className="text-xs font-bold uppercase tracking-wider text-white">
+          {isPinnedMode ? `Pinned Notice (${baseNotices.length})` : `Notice (${baseNotices.length})`}
+        </span>
       </div>
 
       <div className="relative flex-1 overflow-hidden py-2.5">
@@ -95,15 +123,20 @@ export default function NoticeTicker({ notices }: Props) {
             return (
               <a
                 key={`${n.id}-${i}`}
-                href="#notices"
-                onClick={handleScrollToNotices}
-                className="flex items-center gap-2 text-sm transition-opacity hover:opacity-90 group/item"
+                href={`#notice-card-${n.id}`}
+                onClick={(e) => handleScrollToNotice(e, n.id)}
+                className="flex items-center gap-2 text-sm transition-opacity hover:opacity-90 group/item cursor-pointer"
               >
+                {n.is_pinned && (
+                  <span className="rounded-full bg-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-400/40 uppercase tracking-wide">
+                    📌 Pinned
+                  </span>
+                )}
                 <span className={`h-2 w-2 shrink-0 rounded-full ${ps.dot}`} />
                 <span className="font-bold text-white group-hover/item:underline">{n.title}</span>
                 <span className="text-white/80">— {cleanBody}</span>
                 {attachmentUrl && (
-                  <span className="flex items-center gap-1 rounded bg-brand-600/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="flex items-center gap-1 rounded bg-brand-600/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     <Paperclip className="h-3 w-3" />
                     {attachmentName || 'Attachment'}
                   </span>
