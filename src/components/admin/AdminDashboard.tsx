@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useNotices, useUpdates } from '@/lib/hooks';
-import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority, AttachmentType } from '@/lib/types';
+import { useNotices, useUpdates, usePhases, usePublications } from '@/lib/hooks';
+import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority, AttachmentType, Publication, PublicationInput, PublicationType } from '@/lib/types';
 import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta, parseNoticeAttachment, pushNoticesToGitHub, uploadFileToGitHub, uploadFileToSupabaseStorage, generateUUID } from '@/lib/utils';
-import { X, Megaphone, History, Plus, Pencil, Trash2, Pin, PinOff, Loader2, Save, Paperclip, Upload, FileText, FileSpreadsheet, Image as ImageIcon, File, Globe, Key } from 'lucide-react';
+import { X, Megaphone, History, Layers, Plus, Pencil, Trash2, Pin, PinOff, Loader2, Save, Paperclip, Upload, FileText, FileSpreadsheet, Image as ImageIcon, File, Globe, Key, BookOpen } from 'lucide-react';
 
 interface Props {
   onSignOut: () => void;
@@ -11,16 +11,19 @@ interface Props {
   onChanged: () => void;
 }
 
-type Tab = 'notices' | 'updates';
+type Tab = 'notices' | 'updates' | 'publications' | 'phases';
 
 export default function AdminDashboard({ onSignOut, onClose, onChanged }: Props) {
   const [tab, setTab] = useState<Tab>('notices');
   const { data: notices, refresh: refreshNotices } = useNotices();
   const { data: updates, refresh: refreshUpdates } = useUpdates();
+  const { data: publications, refresh: refreshPublications } = usePublications();
 
   const tabs: { key: Tab; label: string; icon: typeof Megaphone }[] = [
     { key: 'notices', label: 'Notices', icon: Megaphone },
     { key: 'updates', label: 'Updates', icon: History },
+    { key: 'publications', label: 'Publications', icon: BookOpen },
+    { key: 'phases', label: 'Phases', icon: Layers },
   ];
 
   return (
@@ -88,6 +91,12 @@ export default function AdminDashboard({ onSignOut, onClose, onChanged }: Props)
           )}
           {tab === 'updates' && (
             <UpdatesAdmin updates={updates} refresh={refreshUpdates} onChanged={onChanged} />
+          )}
+          {tab === 'publications' && (
+            <PublicationsAdmin publications={publications} refresh={refreshPublications} onChanged={onChanged} />
+          )}
+          {tab === 'phases' && (
+            <PhasesAdmin onChanged={onChanged} />
           )}
         </div>
       </div>
@@ -855,6 +864,354 @@ function UpdateForm({
   );
 }
 
+/* ---------------- Publications Admin ---------------- */
+
+function PublicationsAdmin({
+  publications,
+  refresh,
+  onChanged,
+}: {
+  publications: Publication[];
+  refresh: () => void;
+  onChanged: () => void;
+}) {
+  const [editing, setEditing] = useState<Publication | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const remove = async (p: Publication) => {
+    if (!confirm(`Delete publication "${p.title}"? This cannot be undone.`)) return;
+    setBusyId(p.id);
+    await supabase.from('publications').delete().eq('id', p.id);
+
+    try {
+      const deletedStr = localStorage.getItem('pust_deleted_publications');
+      const deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
+      if (!deletedIds.includes(p.id)) {
+        deletedIds.push(p.id);
+      }
+      localStorage.setItem('pust_deleted_publications', JSON.stringify(deletedIds));
+
+      const cached = localStorage.getItem('pust_publications_cache');
+      if (cached) {
+        const list: Publication[] = JSON.parse(cached);
+        const updatedList = list.filter((item) => item.id !== p.id);
+        localStorage.setItem('pust_publications_cache', JSON.stringify(updatedList));
+      }
+    } catch {}
+
+    window.dispatchEvent(new Event('pust_publications_updated'));
+    setBusyId(null);
+    refresh();
+    onChanged();
+  };
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="font-display text-base font-bold text-ink-900">Manage Publications & Patents</h3>
+          <p className="text-xs text-ink-500">
+            Add or edit research papers, journal articles, and patents. Changes appear instantly across the website.
+          </p>
+        </div>
+        <button
+          onClick={() => setCreating(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-700"
+        >
+          <Plus className="h-4 w-4" /> New Publication
+        </button>
+      </div>
+
+      {publications.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-ink-200 p-8 text-center text-sm text-ink-500">
+          No publications added yet. Click <strong>"New Publication"</strong> above to publish a paper or patent.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {publications.map((p) => (
+            <div key={p.id} className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200">
+                      {p.badge || p.type.toUpperCase()}
+                    </span>
+                    <span className="text-xs font-semibold text-ink-400">• {p.year}</span>
+                  </div>
+                  <h4 className="mt-1 font-display text-sm font-bold text-ink-900">{p.title}</h4>
+                  <p className="mt-0.5 text-xs font-medium text-ink-700">{p.authors}</p>
+                  <p className="text-xs italic text-brand-700">{p.venue}</p>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => setEditing(p)}
+                    className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 hover:text-ink-800"
+                    title="Edit"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => remove(p)}
+                    disabled={busyId === p.id}
+                    className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                    title="Delete"
+                  >
+                    {busyId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(creating || editing) && (
+        <PublicationModal
+          publication={editing}
+          onClose={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
+          onSaved={() => {
+            setCreating(false);
+            setEditing(null);
+            refresh();
+            onChanged();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function PublicationModal({
+  publication,
+  onClose,
+  onSaved,
+}: {
+  publication: Publication | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = useState(publication?.title || '');
+  const [authors, setAuthors] = useState(publication?.authors || '');
+  const [venue, setVenue] = useState(publication?.venue || '');
+  const [year, setYear] = useState(publication?.year || new Date().getFullYear().toString());
+  const [type, setType] = useState<PublicationType>(publication?.type || 'journal');
+  const [badge, setBadge] = useState(publication?.badge || 'Q1 Journal');
+  const [doi, setDoi] = useState(publication?.doi || '');
+  const [abstract, setAbstract] = useState(publication?.abstract || '');
+  const [bibtex, setBibtex] = useState(publication?.bibtex || '');
+
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async () => {
+    if (!title.trim()) {
+      setError('Title is required.');
+      return;
+    }
+    if (!authors.trim()) {
+      setError('Authors are required.');
+      return;
+    }
+    if (!venue.trim()) {
+      setError('Venue / Journal is required.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+
+    const input: PublicationInput = {
+      title: title.trim(),
+      authors: authors.trim(),
+      venue: venue.trim(),
+      year: year.trim() || new Date().getFullYear().toString(),
+      type,
+      badge: badge.trim() || (type === 'journal' ? 'Q1 Journal' : type === 'conference' ? 'Conference' : 'Patent'),
+      doi: doi.trim() || undefined,
+      abstract: abstract.trim(),
+      bibtex: bibtex.trim(),
+    };
+
+    const pubId = publication?.id || generateUUID();
+    const createdAtStr = publication?.created_at || new Date().toISOString();
+
+    await (publication
+      ? supabase.from('publications').update({ ...input, updated_at: new Date().toISOString() }).eq('id', publication.id)
+      : supabase.from('publications').insert({ id: pubId, ...input, created_at: createdAtStr }));
+
+    setSaving(false);
+
+    try {
+      const cachedStr = localStorage.getItem('pust_publications_cache');
+      let currentPubs: Publication[] = cachedStr ? JSON.parse(cachedStr) : [];
+      const pubObj: Publication = {
+        id: pubId,
+        ...input,
+        created_at: createdAtStr,
+        updated_at: new Date().toISOString(),
+      };
+      if (publication) {
+        currentPubs = currentPubs.map((item) => (item.id === publication.id ? pubObj : item));
+      } else {
+        currentPubs = [pubObj, ...currentPubs];
+      }
+      localStorage.setItem('pust_publications_cache', JSON.stringify(currentPubs));
+    } catch {}
+
+    window.dispatchEvent(new Event('pust_publications_updated'));
+    onSaved();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink-950/50 p-4 animate-fade-in">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl animate-scale-in max-h-[90vh] overflow-y-auto scroll-thin">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-display text-lg font-bold text-ink-900">
+            {publication ? 'Edit Publication' : 'New Publication'}
+          </h3>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-400 hover:bg-ink-100">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          <Field label="Title *">
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Hyperspectral Imaging for Crop Quality Assessment" className={inputCls} />
+          </Field>
+          <Field label="Authors *">
+            <input value={authors} onChange={(e) => setAuthors(e.target.value)} placeholder="e.g. S. M. Hasan Sazzad Iqbal, Toukir Ahmed, et al." className={inputCls} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Venue / Journal *">
+              <input value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="e.g. Computers and Electronics in Agriculture" className={inputCls} />
+            </Field>
+            <Field label="Year *">
+              <input value={year} onChange={(e) => setYear(e.target.value)} placeholder="2026" className={inputCls} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Category Type">
+              <select value={type} onChange={(e) => setType(e.target.value as PublicationType)} className={inputCls}>
+                <option value="journal">Journal Paper</option>
+                <option value="conference">Conference Proceeding</option>
+                <option value="patent">Patent / IP Filing</option>
+              </select>
+            </Field>
+            <Field label="Badge Tag">
+              <input value={badge} onChange={(e) => setBadge(e.target.value)} placeholder="e.g. Q1 Journal, IEEE Conference" className={inputCls} />
+            </Field>
+          </div>
+          <Field label="DOI / External URL">
+            <input value={doi} onChange={(e) => setDoi(e.target.value)} placeholder="https://doi.org/10.1016/j.compag..." className={inputCls} />
+          </Field>
+          <Field label="Abstract">
+            <textarea value={abstract} onChange={(e) => setAbstract(e.target.value)} rows={3} placeholder="Brief summary of research paper findings..." className={inputCls} />
+          </Field>
+          <Field label="BibTeX Citation">
+            <textarea value={bibtex} onChange={(e) => setBibtex(e.target.value)} rows={3} placeholder="@article{iqbal2026hyperspectral, ...}" className={inputCls} />
+          </Field>
+
+          {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-inset ring-red-200">{error}</div>}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button onClick={onClose} className="rounded-lg border border-ink-200 px-4 py-2 text-sm font-medium text-ink-700 hover:bg-ink-50">
+              Cancel
+            </button>
+            <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PhasesAdmin({ onChanged }: { onChanged: () => void }) {
+  const { data: phases, updatePhaseStatus } = usePhases();
+
+  return (
+    <div>
+      <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50/60 p-4">
+        <h3 className="font-display text-base font-bold text-ink-900">Project Milestone Phases Control</h3>
+        <p className="mt-1 text-xs text-ink-600">
+          Select status for each phase (Completed, Active / In-Progress, or Upcoming). Changes immediately update the live project roadmap for all users globally.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {phases.map((p) => (
+          <div key={p.number} className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-xs font-bold text-brand-700">
+                    P{p.number}
+                  </span>
+                  <h4 className="font-display text-sm font-bold text-ink-900">
+                    Phase {p.number}: {p.title}
+                  </h4>
+                  <span className="text-xs font-semibold text-ink-400">({p.duration})</span>
+                </div>
+                <p className="mt-1.5 text-xs text-ink-600 leading-relaxed">{p.description}</p>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0 pt-2 sm:pt-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    updatePhaseStatus(p.number, 'completed');
+                    onChanged();
+                  }}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${
+                    p.status === 'completed'
+                      ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300'
+                      : 'bg-ink-100 text-ink-600 hover:bg-emerald-100 hover:text-emerald-800'
+                  }`}
+                >
+                  Completed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updatePhaseStatus(p.number, 'in-progress');
+                    onChanged();
+                  }}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${
+                    p.status === 'in-progress'
+                      ? 'bg-brand-600 text-white shadow-sm ring-2 ring-brand-300 animate-pulse-soft'
+                      : 'bg-ink-100 text-ink-600 hover:bg-brand-100 hover:text-brand-800'
+                  }`}
+                >
+                  Active
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updatePhaseStatus(p.number, 'upcoming');
+                    onChanged();
+                  }}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${
+                    p.status === 'upcoming'
+                      ? 'bg-ink-700 text-white shadow-sm ring-2 ring-ink-300'
+                      : 'bg-ink-100 text-ink-600 hover:bg-ink-200 hover:text-ink-900'
+                  }`}
+                >
+                  Upcoming
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- shared bits ---------------- */
 
 const inputCls =
@@ -868,3 +1225,4 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+

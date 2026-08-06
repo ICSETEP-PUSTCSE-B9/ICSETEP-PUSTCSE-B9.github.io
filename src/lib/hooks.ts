@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import type { ProjectInfo, Notice, ProjectUpdate } from './types';
+import type { ProjectInfo, Notice, ProjectUpdate, ProjectPhase, PhaseStatus, Publication } from './types';
 
 export function useProjectInfo() {
   const [data, setData] = useState<ProjectInfo | null>(() => {
@@ -151,25 +151,25 @@ export function useNotices() {
 
 const defaultUpdates: ProjectUpdate[] = [
   {
-    id: 'default-update-1',
+    id: 'default-update-contract-signing',
+    title: 'First eGP Contract Signing Ceremony',
+    body: 'Official eGP contract signing ceremony for research laboratory equipment procurement under ICSETEP sub-project RDG B9 at Department of CSE, PUST.',
+    created_at: '2026-08-02T10:00:00.000Z',
+    updated_at: '2026-08-02T10:00:00.000Z',
+  },
+  {
+    id: 'default-update-inception',
     title: 'ICSETEP RDG B9 Research Sub-Project Inception',
-    body: 'Official kickoff and agreement signing for the Smart, Affordable, and Sustainable Agro-Tech Transformation research sub-project funded by ADB & UGC under ICSETEP.',
-    created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    updated_at: new Date().toISOString(),
+    body: 'Official project inception program, work plan orientation, and research roadmap alignment at Dept. of Computer Science & Engineering, PUST.',
+    created_at: '2026-05-16T10:00:00.000Z',
+    updated_at: '2026-05-16T10:00:00.000Z',
   },
   {
-    id: 'default-update-2',
-    title: 'Hyperspectral & XAI Hardware Infrastructure Setup',
-    body: 'Establishment of state-of-the-art research laboratory facilities at the Department of Computer Science & Engineering, Pabna University of Science & Technology (PUST).',
-    created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'default-update-3',
-    title: 'Algorithm Design & Hyperspectral Calibration',
-    body: 'Initiated neural network architecture design for non-destructive agricultural product quality assessment and XAI feature visualization maps.',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    id: 'default-update-inauguration',
+    title: 'Project Inauguration Ceremony',
+    body: 'Grand inauguration ceremony of the Smart, Affordable, and Sustainable Agro-Tech Transformation research sub-project funded by ADB & UGC under ICSETEP.',
+    created_at: '2026-01-20T10:00:00.000Z',
+    updated_at: '2026-01-20T10:00:00.000Z',
   },
 ];
 
@@ -177,8 +177,60 @@ export function useUpdates() {
   const loadUpdates = useCallback(() => {
     try {
       const cached = localStorage.getItem('pust_updates_cache');
-      const list: ProjectUpdate[] = cached ? JSON.parse(cached) : [];
-      return list.length > 0 ? list : defaultUpdates;
+      let list: ProjectUpdate[] = cached ? JSON.parse(cached) : [];
+      
+      // Clean old/stale default and invalid date updates (specifically Feb 8 contract signing & Jan 10 inception)
+      list = list.filter((u) => {
+        if (!u || !u.id) return false;
+        if (u.id === 'default-update-1' || u.id === 'default-update-2' || u.id === 'default-update-3') return false;
+
+        const titleLower = (u.title || '').toLowerCase();
+        const bodyLower = (u.body || '').toLowerCase();
+        const dateStr = u.created_at || '';
+
+        // Filter out Feb 8 or Jan 10 explicit dates
+        if (dateStr.includes('02-08') || dateStr.includes('01-10') || dateStr.includes('2026-02-08') || dateStr.includes('2026-01-10')) {
+          return false;
+        }
+        if (titleLower.includes('feb 8') || titleLower.includes('february 8') || bodyLower.includes('feb 8') || bodyLower.includes('february 8')) {
+          return false;
+        }
+        if (titleLower.includes('jan 10') || titleLower.includes('january 10') || bodyLower.includes('jan 10') || bodyLower.includes('january 10')) {
+          return false;
+        }
+
+        // Remove old Contract Signing entries that are not the official August 2, 2026 contract signing
+        if (titleLower.includes('contract signing') && u.id !== 'default-update-contract-signing' && !dateStr.startsWith('2026-08-02')) {
+          return false;
+        }
+
+        // Remove old Inception entries that are not the official May 16, 2026 inception
+        if (titleLower.includes('inception') && u.id !== 'default-update-inception' && !dateStr.startsWith('2026-05-16')) {
+          return false;
+        }
+
+        return true;
+      });
+
+      // Ensure default update entries exist if user hasn't deleted them explicitly
+      const hasContract = list.some((u) => u.id === 'default-update-contract-signing' || (u.title.includes('Contract Signing') && u.created_at.startsWith('2026-08-02')));
+      const hasInception = list.some((u) => u.id === 'default-update-inception' || (u.title.includes('Inception') && u.created_at.startsWith('2026-05-16')));
+      const hasInauguration = list.some((u) => u.id === 'default-update-inauguration' || (u.title.includes('Inauguration') && u.created_at.startsWith('2026-01-20')));
+      
+      const missingDefaults: ProjectUpdate[] = [];
+      if (!hasContract) missingDefaults.push(defaultUpdates[0]);
+      if (!hasInception) missingDefaults.push(defaultUpdates[1]);
+      if (!hasInauguration) missingDefaults.push(defaultUpdates[2]);
+
+      const combined = [...list, ...missingDefaults].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      try {
+        localStorage.setItem('pust_updates_cache', JSON.stringify(combined));
+      } catch {}
+
+      return combined;
     } catch {
       return defaultUpdates;
     }
@@ -197,12 +249,22 @@ export function useUpdates() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      const cached = localStorage.getItem('pust_updates_cache');
-      const localList: ProjectUpdate[] = cached ? JSON.parse(cached) : [];
+      const localList = loadUpdates();
 
       const map = new Map<string, ProjectUpdate>();
       if (resData && resData.length > 0) {
-        (resData as ProjectUpdate[]).forEach((u) => map.set(u.id, u));
+        (resData as ProjectUpdate[]).forEach((u) => {
+          const titleLower = (u.title || '').toLowerCase();
+          const dateStr = u.created_at || '';
+          if (
+            !dateStr.includes('02-08') &&
+            !dateStr.includes('01-10') &&
+            !titleLower.includes('feb 8') &&
+            !titleLower.includes('jan 10')
+          ) {
+            map.set(u.id, u);
+          }
+        });
       }
       localList.forEach((u) => map.set(u.id, u));
 
@@ -222,7 +284,7 @@ export function useUpdates() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadUpdates]);
 
   useEffect(() => {
     fetch();
@@ -235,6 +297,168 @@ export function useUpdates() {
     window.addEventListener('pust_updates_updated', handleUpdate);
     return () => window.removeEventListener('pust_updates_updated', handleUpdate);
   }, [fetch, loadUpdates]);
+
+  return { data, loading, error, refresh: fetch };
+}
+
+const defaultPhases: ProjectPhase[] = [
+  {
+    number: 1,
+    title: 'Project Inception',
+    duration: 'Months 1 – 4',
+    status: 'completed',
+    description: 'Grant agreement signing, project inception program, laboratory infrastructure establishment, and ethics approvals.',
+    deliverables: ['Inception Ceremony & Orientation', 'Lab Setup at Dept. of CSE, PUST', 'Initial Optical Hardware Planning'],
+  },
+  {
+    number: 2,
+    title: 'Hyperspectral Hardware Assembly & Calibration',
+    duration: 'Months 5 – 9',
+    status: 'in-progress',
+    description: 'Custom imaging system assembly, spectral calibration across target bands, and agricultural sample database creation.',
+    deliverables: ['Custom HSI Hardware Rig', 'Calibrated Optical Sensors', 'Baseline Agricultural Image Dataset'],
+  },
+  {
+    number: 3,
+    title: 'Deep Learning & XAI Model Development',
+    duration: 'Months 10 – 15',
+    status: 'upcoming',
+    description: 'Designing neural network architectures for spectral image reconstruction and Explainable AI (XAI) feature maps.',
+    deliverables: ['Image Reconstruction Algorithm', 'XAI Explainability Engine', 'Q1 Journal Research Paper Drafts'],
+  },
+  {
+    number: 4,
+    title: 'Consumer Software & Mobile App Integration',
+    duration: 'Months 16 – 20',
+    status: 'upcoming',
+    description: 'Developing user-friendly web and mobile applications for real-time agricultural product assessment in the field.',
+    deliverables: ['Mobile Inspection App', 'Cloud Assessment API', 'User Field Testing Workshops'],
+  },
+  {
+    number: 5,
+    title: 'Field Testing, Validation & Technology Transfer',
+    duration: 'Months 21 – 24',
+    status: 'upcoming',
+    description: 'Field validation with local farmers, final performance evaluation, stakeholder dissemination, and patent filing.',
+    deliverables: ['Field Performance Report', 'Stakeholder Dissemination Workshop', 'Patent & Software Copyright Filing'],
+  },
+];
+
+export function usePhases() {
+  const loadPhases = useCallback((): ProjectPhase[] => {
+    try {
+      const cached = localStorage.getItem('pust_phases_cache');
+      if (cached) {
+        const parsed: ProjectPhase[] = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length === 5) {
+          return parsed;
+        }
+      }
+      return defaultPhases;
+    } catch {
+      return defaultPhases;
+    }
+  }, []);
+
+  const [data, setData] = useState<ProjectPhase[]>(loadPhases);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      const current = loadPhases();
+      setData(current);
+    };
+    window.addEventListener('pust_phases_updated', handleUpdate);
+    return () => window.removeEventListener('pust_phases_updated', handleUpdate);
+  }, [loadPhases]);
+
+  const updatePhaseStatus = useCallback((phaseNumber: number, newStatus: PhaseStatus) => {
+    setData((prev) => {
+      const updated = prev.map((p) => (p.number === phaseNumber ? { ...p, status: newStatus } : p));
+      try {
+        localStorage.setItem('pust_phases_cache', JSON.stringify(updated));
+      } catch {}
+      window.dispatchEvent(new Event('pust_phases_updated'));
+      return updated;
+    });
+  }, []);
+
+  return { data, updatePhaseStatus };
+}
+
+export function usePublications() {
+  const loadPublications = useCallback((): Publication[] => {
+    try {
+      const cached = localStorage.getItem('pust_publications_cache');
+      let list: Publication[] = cached ? JSON.parse(cached) : [];
+      const deletedStr = localStorage.getItem('pust_deleted_publications');
+      const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
+      return list.filter((p) => !deletedIds.has(p.id));
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const [data, setData] = useState<Publication[]>(loadPublications);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: resData, error: resError } = await supabase
+        .from('publications')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      const localList = loadPublications();
+      const deletedStr = localStorage.getItem('pust_deleted_publications');
+      const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
+
+      const map = new Map<string, Publication>();
+      if (resData && resData.length > 0) {
+        (resData as Publication[]).forEach((p) => {
+          if (!deletedIds.has(p.id)) {
+            map.set(p.id, p);
+          }
+        });
+      }
+      localList.forEach((p) => {
+        if (!deletedIds.has(p.id)) {
+          map.set(p.id, p);
+        }
+      });
+
+      const merged = Array.from(map.values()).sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return timeB - timeA;
+      });
+
+      setData(merged);
+      localStorage.setItem('pust_publications_cache', JSON.stringify(merged));
+
+      if (resError && merged.length === 0) {
+        setError(resError.message);
+      }
+    } catch (e: any) {
+      if (data.length === 0) setData(loadPublications());
+    } finally {
+      setLoading(false);
+    }
+  }, [loadPublications, data.length]);
+
+  useEffect(() => {
+    fetch();
+
+    const handleUpdate = () => {
+      const current = loadPublications();
+      setData(current);
+    };
+
+    window.addEventListener('pust_publications_updated', handleUpdate);
+    return () => window.removeEventListener('pust_publications_updated', handleUpdate);
+  }, [fetch, loadPublications]);
 
   return { data, loading, error, refresh: fetch };
 }

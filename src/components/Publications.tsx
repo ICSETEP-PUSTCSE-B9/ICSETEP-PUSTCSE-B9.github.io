@@ -1,23 +1,10 @@
 import { useState } from 'react';
 import { FileText, ExternalLink, Copy, Check, Sparkles, Award, BookOpen, Inbox } from 'lucide-react';
-
-export interface Publication {
-  id: string;
-  title: string;
-  authors: string;
-  venue: string;
-  year: string;
-  type: 'journal' | 'conference' | 'patent';
-  badge: string;
-  doi?: string;
-  abstract: string;
-  bibtex: string;
-}
-
-// Currently empty - items will be added as publications are finalized
-const publications: Publication[] = [];
+import { usePublications } from '@/lib/hooks';
+import type { Publication } from '@/lib/types';
 
 export default function Publications() {
+  const { data: publications } = usePublications();
   const [filter, setFilter] = useState<'all' | 'journal' | 'conference' | 'patent'>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 

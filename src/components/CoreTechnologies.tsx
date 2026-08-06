@@ -10,7 +10,7 @@ const technologies = [
     badge: 'Hardware System',
     description:
       'Custom affordable imaging hardware capturing spectral signatures across wavelength bands for non-destructive agricultural inspection.',
-    features: ['Multi-band spectrum analysis', 'Affordable optical setup', 'Non-destructive quality testing'],
+    features: ['Multi-band spectrum analysis', 'Non-destructive quality testing'],
   },
   {
     id: 'dl',
@@ -21,7 +21,7 @@ const technologies = [
     badge: 'AI Engine',
     description:
       'State-of-the-art neural network architectures for fast, accurate spectral image reconstruction and disease spatial mapping.',
-    features: ['High-fidelity reconstruction', 'Real-time spectral synthesis', 'Sub-pixel accuracy'],
+    features: ['High-fidelity reconstruction', 'Real-time spectral synthesis'],
   },
   {
     id: 'xai',
@@ -31,8 +31,8 @@ const technologies = [
     color: 'from-amber-500 to-orange-600',
     badge: 'Trust Framework',
     description:
-      'Interpretable models providing visual saliency maps and feature explanations so farmers and inspectors trust AI evaluations.',
-    features: ['Saliency map visualization', 'Transparent feature weights', 'Actionable diagnostic reports'],
+      'Interpretable models providing visual prediction maps and feature explanations so farmers and inspectors trust AI evaluations.',
+    features: ['Prediction map visualization', 'Transparent feature weights'],
   },
   {
     id: 'app',
@@ -43,7 +43,7 @@ const technologies = [
     badge: 'Mobile & Web',
     description:
       'User-friendly web and mobile application enabling farmers, buyers, and agricultural officers to scan and grade food quality effortlessly.',
-    features: ['Instant quality grading', 'Disease diagnostic alerts', 'Cloud analytics dashboard'],
+    features: ['Instant quality grading', 'Cloud analytics dashboard'],
   },
 ];
 
@@ -57,10 +57,10 @@ export default function CoreTechnologies() {
             Core Technological Pillars
           </span>
           <h2 className="mt-3 font-display text-3xl font-bold text-ink-900 sm:text-4xl">
-            Intelligent Imaging & Explainable AI Stack
+            Image Reconstruction and Quality Assessment Technologies
           </h2>
           <p className="mt-2 text-base text-ink-600">
-            Integrating cutting-edge spectral hardware, deep learning algorithms, and explainable models tailored for Bangladesh's agricultural ecosystem.
+            Deep learning based Hyperspectral image reconstruction and explainable AI for agricultural quality assessment.
           </p>
         </div>
 

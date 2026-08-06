@@ -1,6 +1,6 @@
 import { Component, ReactNode, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useProjectInfo, useNotices, useUpdates, useAuth } from '@/lib/hooks';
+import { useProjectInfo, useNotices, useUpdates, usePublications, useAuth } from '@/lib/hooks';
 import { useScrollReveal } from '@/lib/useScrollReveal';
 import NoticeTicker from '@/components/NoticeTicker';
 import Header from '@/components/Header';
@@ -71,6 +71,7 @@ export default function App() {
   const { data: info, refresh: refreshInfo } = useProjectInfo();
   const { data: notices, refresh: refreshNotices } = useNotices();
   const { data: updates, refresh: refreshUpdates } = useUpdates();
+  const { refresh: refreshPublications } = usePublications();
   const { session, loading: authLoading, signIn, signOut } = useAuth();
 
   const [adminOpen, setAdminOpen] = useState(false);
@@ -79,7 +80,8 @@ export default function App() {
     refreshInfo();
     refreshNotices();
     refreshUpdates();
-  }, [refreshInfo, refreshNotices, refreshUpdates]);
+    refreshPublications();
+  }, [refreshInfo, refreshNotices, refreshUpdates, refreshPublications]);
 
   useScrollReveal();
 

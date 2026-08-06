@@ -1,59 +1,10 @@
 import { CheckCircle, Clock, Calendar, Sparkles } from 'lucide-react';
 import { getAssetUrl } from '@/lib/utils';
-
-interface Phase {
-  number: number;
-  title: string;
-  duration: string;
-  status: 'completed' | 'in-progress' | 'upcoming';
-  description: string;
-  deliverables: string[];
-}
-
-const phases: Phase[] = [
-  {
-    number: 1,
-    title: 'Project Inception',
-    duration: 'Months 1 – 4',
-    status: 'completed',
-    description: 'Grant agreement signing, project inception program, laboratory infrastructure establishment, and ethics approvals.',
-    deliverables: ['Inception Ceremony & Orientation', 'Lab Setup at Dept. of CSE, PUST', 'Initial Optical Hardware Planning'],
-  },
-  {
-    number: 2,
-    title: 'Hyperspectral Hardware Assembly & Calibration',
-    duration: 'Months 5 – 9',
-    status: 'in-progress',
-    description: 'Custom imaging system assembly, spectral calibration across target bands, and agricultural sample database creation.',
-    deliverables: ['Custom HSI Hardware Rig', 'Calibrated Optical Sensors', 'Baseline Agricultural Image Dataset'],
-  },
-  {
-    number: 3,
-    title: 'Deep Learning & XAI Model Development',
-    duration: 'Months 10 – 15',
-    status: 'in-progress',
-    description: 'Designing neural network architectures for spectral image reconstruction and Explainable AI (XAI) feature maps.',
-    deliverables: ['Image Reconstruction Algorithm', 'XAI Explainability Engine', 'Q1 Journal Research Paper Drafts'],
-  },
-  {
-    number: 4,
-    title: 'Consumer Software & Mobile App Integration',
-    duration: 'Months 16 – 20',
-    status: 'upcoming',
-    description: 'Developing user-friendly web and mobile applications for real-time agricultural product assessment in the field.',
-    deliverables: ['Mobile Inspection App', 'Cloud Assessment API', 'User Field Testing Workshops'],
-  },
-  {
-    number: 5,
-    title: 'Field Testing, Validation & Technology Transfer',
-    duration: 'Months 21 – 24',
-    status: 'upcoming',
-    description: 'Field validation with local farmers, final performance evaluation, stakeholder dissemination, and patent filing.',
-    deliverables: ['Field Performance Report', 'Stakeholder Dissemination Workshop', 'Patent & Software Copyright Filing'],
-  },
-];
+import { usePhases } from '@/lib/hooks';
 
 export default function ProjectRoadmap() {
+  const { data: phases } = usePhases();
+
   return (
     <section id="roadmap" className="scroll-mt-20 bg-ink-50/60 py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">

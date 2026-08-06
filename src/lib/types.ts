@@ -73,3 +73,43 @@ export interface UpdateInput {
   title: string;
   body: string;
 }
+
+export type PhaseStatus = 'completed' | 'in-progress' | 'upcoming';
+
+export interface ProjectPhase {
+  number: number;
+  title: string;
+  duration: string;
+  status: PhaseStatus;
+  description: string;
+  deliverables: string[];
+}
+
+export type PublicationType = 'journal' | 'conference' | 'patent';
+
+export interface Publication {
+  id: string;
+  title: string;
+  authors: string;
+  venue: string;
+  year: string;
+  type: PublicationType;
+  badge: string;
+  doi?: string;
+  abstract: string;
+  bibtex: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PublicationInput {
+  title: string;
+  authors: string;
+  venue: string;
+  year: string;
+  type: PublicationType;
+  badge: string;
+  doi?: string;
+  abstract: string;
+  bibtex: string;
+}
