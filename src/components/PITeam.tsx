@@ -87,7 +87,7 @@ export default function PITeam() {
           return (
             <div
               key={m.id}
-              className="reveal flex flex-col justify-between rounded-2xl border border-ink-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-brand-200"
+              className="reveal flex flex-col justify-between rounded-2xl border border-ink-200 bg-white p-5 sm:p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-brand-200"
             >
               <div>
                 <div className="relative mx-auto h-32 w-32 overflow-hidden rounded-full ring-4 ring-brand-100 shadow-md bg-brand-50 flex items-center justify-center">

@@ -35,20 +35,20 @@ export default function UpdatesTimeline({ updates }: Props) {
               {updates.map((u, i) => (
                 <li
                   key={u.id}
-                  className="reveal relative pl-8 sm:pl-12"
+                  className="reveal relative pl-7 sm:pl-12"
                   style={{ transitionDelay: `${i * 60}ms` }}
                 >
                   <span className="absolute left-0 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 ring-4 ring-ink-50 sm:h-5 sm:w-5">
                     <Dot className="h-4 w-4 text-white" />
                   </span>
-                  <div className="rounded-2xl border border-ink-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">
+                  <div className="rounded-2xl border border-ink-200 bg-white p-4 sm:p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+                    <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-ink-400">
                       {formatDate(u.created_at)}
                     </span>
-                    <h3 className="mt-1.5 font-display text-lg font-bold text-ink-900">
+                    <h3 className="mt-1 font-display text-base sm:text-lg font-bold text-ink-900">
                       {u.title}
                     </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-ink-600">{u.body}</p>
+                    <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-ink-600">{u.body}</p>
                   </div>
                 </li>
               ))}

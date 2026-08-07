@@ -69,27 +69,27 @@ export default function ProjectOverview({ info }: Props) {
       />
       <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-200/40 blur-3xl" />
 
-      <div className="relative mx-auto max-w-6xl px-4 pt-14 pb-16 sm:px-6 sm:pt-20">
+      <div className="relative mx-auto max-w-6xl px-4 pt-10 pb-12 sm:px-6 sm:pt-20 sm:pb-16">
         <div className="w-full">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${sc.bg} ${sc.text} ${sc.ring}`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] sm:text-xs font-semibold ring-1 ring-inset ${sc.bg} ${sc.text} ${sc.ring}`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${sc.dot} animate-pulse-soft`} />
               {activeInfo.status}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200">
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-[11px] sm:text-xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200 leading-normal">
               ICSETEP RDG B9 | Flagship Research Sub-Project Grant
             </span>
           </div>
 
-          <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-ink-900 sm:text-5xl">
+          <h1 className="mt-3 font-display text-2xl font-bold leading-tight text-ink-900 sm:text-4xl lg:text-5xl">
             {displayTitle}
           </h1>
-          <p className="mt-3 text-lg font-bold text-brand-600 sm:text-xl leading-snug">
+          <p className="mt-2.5 text-base font-bold text-brand-600 sm:text-xl leading-snug">
             {displayTagline}
           </p>
-          <p className="mt-4 max-w-4xl text-base leading-relaxed text-ink-500">
+          <p className="mt-3 max-w-4xl text-sm sm:text-base leading-relaxed text-ink-500">
             {activeInfo.description}
           </p>
         </div>

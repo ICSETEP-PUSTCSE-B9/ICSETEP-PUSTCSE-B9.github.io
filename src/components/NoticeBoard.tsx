@@ -53,24 +53,24 @@ export default function NoticeBoard({ notices }: Props) {
                 <article
                   key={n.id}
                   id={`notice-card-${n.id}`}
-                  className="reveal group relative flex flex-col rounded-2xl border border-ink-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
+                  className="reveal group relative flex flex-col rounded-2xl border border-ink-200 bg-white p-5 sm:p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
                   style={{ transitionDelay: `${i * 50}ms` }}
                 >
                   {n.is_pinned && (
-                    <span className="absolute right-5 top-5 flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full ring-1 ring-inset ring-amber-200">
-                      <Pin className="h-3.5 w-3.5" />
+                    <span className="absolute right-4 top-4 sm:right-5 sm:top-5 flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-amber-600 bg-amber-50 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full ring-1 ring-inset ring-amber-200">
+                      <Pin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       Pinned
                     </span>
                   )}
 
                   <div className="flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${ps.dot}`} />
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${ps.badge}`}>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold ring-1 ring-inset ${ps.badge}`}>
                       {ps.label}
                     </span>
                   </div>
 
-                  <h3 className="mt-3 pr-20 font-display text-lg font-bold text-ink-900">
+                  <h3 className="mt-3 pr-16 sm:pr-20 font-display text-base sm:text-lg font-bold text-ink-900">
                     {n.title}
                   </h3>
                   <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-600 whitespace-pre-line">{cleanBody}</p>

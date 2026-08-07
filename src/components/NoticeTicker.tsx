@@ -72,10 +72,10 @@ export default function NoticeTicker({ notices }: Props) {
       title="Click notice to jump to Notice Board and download/read attachments"
       className="relative z-40 flex w-full items-stretch border-b border-ink-200 bg-ink-950 text-white overflow-hidden cursor-pointer group/ticker select-none"
     >
-      <div className="flex shrink-0 items-center gap-2 bg-brand-600 px-3 py-2 sm:px-4 group-hover/ticker:bg-brand-500 transition-colors">
-        <Megaphone className="h-4 w-4 shrink-0 text-white" />
-        <span className="text-xs font-bold uppercase tracking-wider text-white">
-          {isPinnedMode ? 'Pinned Notice' : 'Notice'}
+      <div className="flex shrink-0 items-center gap-1.5 bg-brand-600 px-2.5 py-2 sm:px-4 group-hover/ticker:bg-brand-500 transition-colors">
+        <Megaphone className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-white" />
+        <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white">
+          {isPinnedMode ? <><span className="hidden sm:inline">Pinned </span>Notice</> : 'Notice'}
         </span>
       </div>
 

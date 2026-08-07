@@ -60,7 +60,7 @@ export default function AdminDashboard({ onSignOut, onClose, onChanged }: Props)
         </div>
 
         {/* tabs */}
-        <div className="flex gap-1 border-b border-ink-200 bg-white px-4 sm:px-6">
+        <div className="flex gap-1 overflow-x-auto border-b border-ink-200 bg-white px-2 sm:px-6 scroll-thin shrink-0">
           {tabs.map((t) => {
             const Icon = t.icon;
             const activeTab = tab === t.key;
@@ -68,12 +68,12 @@ export default function AdminDashboard({ onSignOut, onClose, onChanged }: Props)
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${activeTab
-                    ? 'border-brand-600 text-brand-700'
+                className={`flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-2.5 text-xs sm:text-sm font-medium transition-colors ${activeTab
+                    ? 'border-brand-600 text-brand-700 font-bold'
                     : 'border-transparent text-ink-500 hover:text-ink-800'
                   }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {t.label}
               </button>
             );

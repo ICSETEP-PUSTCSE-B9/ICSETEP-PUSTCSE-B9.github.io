@@ -39,7 +39,7 @@ export default function MissionVision() {
         <div className="grid gap-6 md:grid-cols-2">
           {/* 1. INTRODUCTION CARD */}
           <div
-            className={`group rounded-2xl border bg-white p-6 sm:p-8 shadow-sm transition-all duration-300 hover:shadow-md md:col-span-2 ${
+            className={`group rounded-2xl border bg-white p-5 sm:p-8 shadow-sm transition-all duration-300 hover:shadow-md md:col-span-2 ${
               introExpanded ? 'border-brand-300 ring-2 ring-brand-100' : 'border-ink-200'
             }`}
           >
