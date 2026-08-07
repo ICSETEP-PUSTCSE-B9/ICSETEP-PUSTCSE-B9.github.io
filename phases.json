@@ -15,7 +15,7 @@
     "number": 2,
     "title": "Hyperspectral Hardware Assembly & Calibration",
     "duration": "Months 5 – 9",
-    "status": "in-progress",
+    "status": "completed",
     "description": "Custom imaging system assembly, spectral calibration across target bands, and agricultural sample database creation.",
     "deliverables": [
       "Custom HSI Hardware Rig",
