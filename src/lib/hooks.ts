@@ -362,27 +362,86 @@ export function usePhases() {
 
   const [data, setData] = useState<ProjectPhase[]>(loadPhases);
 
+  const fetchPhases = useCallback(async () => {
+    try {
+      const { data: resData } = await supabase.from('phases').select('*');
+      if (resData && resData.length > 0) {
+        const map = new Map<number, PhaseStatus>();
+        resData.forEach((row: any) => {
+          if (row.number && row.status) {
+            map.set(Number(row.number), row.status as PhaseStatus);
+          }
+        });
+        const merged = defaultPhases.map((p) => {
+          const s = map.get(p.number);
+          return s ? { ...p, status: s } : p;
+        });
+        setData(merged);
+        try {
+          localStorage.setItem('pust_phases_cache', JSON.stringify(merged));
+        } catch {}
+        return;
+      }
+    } catch (e) {
+      // ignore fallback
+    }
+
+    const local = loadPhases();
+    setData(local);
+  }, [loadPhases]);
+
   useEffect(() => {
+    fetchPhases();
+
     const handleUpdate = () => {
       const current = loadPhases();
       setData(current);
     };
     window.addEventListener('pust_phases_updated', handleUpdate);
     return () => window.removeEventListener('pust_phases_updated', handleUpdate);
-  }, [loadPhases]);
+  }, [fetchPhases, loadPhases]);
 
-  const updatePhaseStatus = useCallback((phaseNumber: number, newStatus: PhaseStatus) => {
+  const updatePhaseStatus = useCallback(async (phaseNumber: number, newStatus: PhaseStatus) => {
+    let updatedList: ProjectPhase[] = [];
     setData((prev) => {
-      const updated = prev.map((p) => (p.number === phaseNumber ? { ...p, status: newStatus } : p));
+      updatedList = prev.map((p) => (p.number === phaseNumber ? { ...p, status: newStatus } : p));
       try {
-        localStorage.setItem('pust_phases_cache', JSON.stringify(updated));
+        localStorage.setItem('pust_phases_cache', JSON.stringify(updatedList));
       } catch {}
       window.dispatchEvent(new Event('pust_phases_updated'));
-      return updated;
+      return updatedList;
     });
+
+    try {
+      await supabase.from('phases').upsert(
+        {
+          number: phaseNumber,
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'number' }
+      );
+    } catch (e) {
+      console.warn('Supabase phase update error:', e);
+    }
+
+    try {
+      const activePhase = updatedList.find((p) => p.status === 'in-progress');
+      if (activePhase) {
+        await supabase
+          .from('project_info')
+          .update({
+            metric1_value: `Phase ${activePhase.number} of 5`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', 1);
+      }
+    } catch (e) {
+      // ignore
+    }
   }, []);
 
-  return { data, updatePhaseStatus };
+  return { data, updatePhaseStatus, refresh: fetchPhases };
 }
 
 export function usePublications() {
