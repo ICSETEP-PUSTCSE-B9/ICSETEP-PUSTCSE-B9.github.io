@@ -179,49 +179,35 @@ export function useUpdates() {
     try {
       const cached = localStorage.getItem('pust_updates_cache');
       let list: ProjectUpdate[] = cached ? JSON.parse(cached) : [];
+      const deletedStr = localStorage.getItem('pust_deleted_updates');
+      const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
       
-      // Clean old/stale default and invalid date updates (specifically Feb 8 contract signing & Jan 10 inception)
+      // Filter out deleted updates
       list = list.filter((u) => {
-        if (!u || !u.id) return false;
+        if (!u || !u.id || deletedIds.has(u.id)) return false;
         if (u.id === 'default-update-1' || u.id === 'default-update-2' || u.id === 'default-update-3') return false;
 
         const titleLower = (u.title || '').toLowerCase();
-        const bodyLower = (u.body || '').toLowerCase();
         const dateStr = u.created_at || '';
 
-        // Filter out Feb 8 or Jan 10 explicit dates
         if (dateStr.includes('02-08') || dateStr.includes('01-10') || dateStr.includes('2026-02-08') || dateStr.includes('2026-01-10')) {
           return false;
         }
-        if (titleLower.includes('feb 8') || titleLower.includes('february 8') || bodyLower.includes('feb 8') || bodyLower.includes('february 8')) {
-          return false;
-        }
-        if (titleLower.includes('jan 10') || titleLower.includes('january 10') || bodyLower.includes('jan 10') || bodyLower.includes('january 10')) {
-          return false;
-        }
-
-        // Remove old Contract Signing entries that are not the official August 2, 2026 contract signing
-        if (titleLower.includes('contract signing') && u.id !== 'default-update-contract-signing' && !dateStr.startsWith('2026-08-02')) {
-          return false;
-        }
-
-        // Remove old Inception entries that are not the official May 16, 2026 inception
-        if (titleLower.includes('inception') && u.id !== 'default-update-inception' && !dateStr.startsWith('2026-05-16')) {
+        if (titleLower.includes('feb 8') || titleLower.includes('february 8') || titleLower.includes('jan 10') || titleLower.includes('january 10')) {
           return false;
         }
 
         return true;
       });
 
-      // Ensure default update entries exist if user hasn't deleted them explicitly
       const hasContract = list.some((u) => u.id === 'default-update-contract-signing' || (u.title.includes('Contract Signing') && u.created_at.startsWith('2026-08-02')));
       const hasInception = list.some((u) => u.id === 'default-update-inception' || (u.title.includes('Inception') && u.created_at.startsWith('2026-05-16')));
       const hasInauguration = list.some((u) => u.id === 'default-update-inauguration' || (u.title.includes('Inauguration') && u.created_at.startsWith('2026-01-20')));
       
       const missingDefaults: ProjectUpdate[] = [];
-      if (!hasContract) missingDefaults.push(defaultUpdates[0]);
-      if (!hasInception) missingDefaults.push(defaultUpdates[1]);
-      if (!hasInauguration) missingDefaults.push(defaultUpdates[2]);
+      if (!hasContract && !deletedIds.has('default-update-contract-signing')) missingDefaults.push(defaultUpdates[0]);
+      if (!hasInception && !deletedIds.has('default-update-inception')) missingDefaults.push(defaultUpdates[1]);
+      if (!hasInauguration && !deletedIds.has('default-update-inauguration')) missingDefaults.push(defaultUpdates[2]);
 
       const combined = [...list, ...missingDefaults].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -266,34 +252,31 @@ export function useUpdates() {
         .order('created_at', { ascending: false });
 
       const localList = loadUpdates();
+      const deletedStr = localStorage.getItem('pust_deleted_updates');
+      const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
 
       const map = new Map<string, ProjectUpdate>();
       if (Array.isArray(ghUpdates)) {
         ghUpdates.forEach((u) => {
-          if (u && u.id) map.set(u.id, u);
+          if (u && u.id && !deletedIds.has(u.id)) map.set(u.id, u);
         });
       }
       if (resData && resData.length > 0) {
         (resData as ProjectUpdate[]).forEach((u) => {
-          const titleLower = (u.title || '').toLowerCase();
-          const dateStr = u.created_at || '';
-          if (
-            !dateStr.includes('02-08') &&
-            !dateStr.includes('01-10') &&
-            !titleLower.includes('feb 8') &&
-            !titleLower.includes('jan 10')
-          ) {
+          if (u && u.id && !deletedIds.has(u.id)) {
             map.set(u.id, u);
           }
         });
       }
-      localList.forEach((u) => map.set(u.id, u));
+      localList.forEach((u) => {
+        if (u && u.id && !deletedIds.has(u.id)) map.set(u.id, u);
+      });
 
       const merged = Array.from(map.values()).sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      const finalData = merged.length > 0 ? merged : defaultUpdates;
+      const finalData = merged;
       setData(finalData);
       localStorage.setItem('pust_updates_cache', JSON.stringify(finalData));
 

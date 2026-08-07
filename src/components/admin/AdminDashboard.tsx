@@ -733,17 +733,29 @@ function UpdatesAdmin({
   const remove = async (u: ProjectUpdate) => {
     if (!confirm(`Delete update "${u.title}"?`)) return;
     setBusyId(u.id);
-    await supabase.from('updates').delete().eq('id', u.id);
+
     try {
-      const cached = localStorage.getItem('pust_updates_cache');
-      if (cached) {
-        const list: ProjectUpdate[] = JSON.parse(cached);
-        const updated = list.filter((item) => item.id !== u.id);
-        localStorage.setItem('pust_updates_cache', JSON.stringify(updated));
-        const token = localStorage.getItem('pust_github_token') || DEFAULT_GITHUB_TOKEN;
-        await pushUpdatesToGitHub(updated, token);
+      const deletedStr = localStorage.getItem('pust_deleted_updates');
+      const deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
+      if (!deletedIds.includes(u.id)) {
+        deletedIds.push(u.id);
       }
-    } catch { }
+      localStorage.setItem('pust_deleted_updates', JSON.stringify(deletedIds));
+    } catch {}
+
+    try {
+      await supabase.from('updates').delete().eq('id', u.id);
+    } catch {}
+
+    const remaining = updates.filter((item) => item.id !== u.id);
+    try {
+      localStorage.setItem('pust_updates_cache', JSON.stringify(remaining));
+      const token = getStoredGitHubToken();
+      if (token) {
+        await pushUpdatesToGitHub(remaining, token);
+      }
+    } catch {}
+
     window.dispatchEvent(new Event('pust_updates_updated'));
     setBusyId(null);
     refresh();
@@ -895,7 +907,6 @@ function PublicationsAdmin({
   const remove = async (p: Publication) => {
     if (!confirm(`Delete publication "${p.title}"? This cannot be undone.`)) return;
     setBusyId(p.id);
-    await supabase.from('publications').delete().eq('id', p.id);
 
     try {
       const deletedStr = localStorage.getItem('pust_deleted_publications');
@@ -904,14 +915,18 @@ function PublicationsAdmin({
         deletedIds.push(p.id);
       }
       localStorage.setItem('pust_deleted_publications', JSON.stringify(deletedIds));
+    } catch {}
 
-      const cached = localStorage.getItem('pust_publications_cache');
-      if (cached) {
-        const list: Publication[] = JSON.parse(cached);
-        const updatedList = list.filter((item) => item.id !== p.id);
-        localStorage.setItem('pust_publications_cache', JSON.stringify(updatedList));
-        const token = localStorage.getItem('pust_github_token') || DEFAULT_GITHUB_TOKEN;
-        await pushPublicationsToGitHub(updatedList, token);
+    try {
+      await supabase.from('publications').delete().eq('id', p.id);
+    } catch {}
+
+    const remaining = publications.filter((item) => item.id !== p.id);
+    try {
+      localStorage.setItem('pust_publications_cache', JSON.stringify(remaining));
+      const token = getStoredGitHubToken();
+      if (token) {
+        await pushPublicationsToGitHub(remaining, token);
       }
     } catch {}
 
