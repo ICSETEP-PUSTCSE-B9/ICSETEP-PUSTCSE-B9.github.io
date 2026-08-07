@@ -73,7 +73,7 @@ export default function NoticeBoard({ notices }: Props) {
                   <h3 className="mt-3 pr-16 sm:pr-20 font-display text-base sm:text-lg font-bold text-ink-900">
                     {n.title}
                   </h3>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-600 whitespace-pre-line">{cleanBody}</p>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-600 whitespace-pre-line break-words max-w-full overflow-hidden">{cleanBody}</p>
 
                   {/* Attachment Section */}
                   {hasAttachment && attachmentUrl && (

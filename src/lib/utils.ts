@@ -137,26 +137,35 @@ export function parseNoticeAttachment(notice: {
   let attachmentName = notice.attachment_name;
   let attachmentType = notice.attachment_type;
 
-  const match = cleanBody.match(/\n\n\[ATTACHMENT:(.*)\]$/s);
+  // Match [ATTACHMENT:{...}] anywhere at the end of body with optional leading newlines/spaces
+  const match = cleanBody.match(/[\s\n]*\[ATTACHMENT:([\s\S]*)\]$/);
   if (match) {
     try {
       const parsed = JSON.parse(match[1]);
       attachmentUrl = attachmentUrl || parsed.url;
       attachmentName = attachmentName || parsed.name;
       attachmentType = attachmentType || parsed.type;
-      cleanBody = cleanBody.replace(/\n\n\[ATTACHMENT:.*\]$/s, '').trim();
     } catch (e) {
       // ignore
     }
   }
 
-  const finalType = attachmentType || (attachmentName ? detectAttachmentType(attachmentName) : 'other');
+  // Strip all raw [ATTACHMENT:...] tags from cleanBody so base64 strings never leak into text rendering!
+  cleanBody = cleanBody.replace(/[\s\n]*\[ATTACHMENT:[\s\S]*?\]/g, '').trim();
+
+  let finalType = attachmentType;
+  if (!finalType && attachmentName) {
+    finalType = detectAttachmentType(attachmentName);
+  }
+  if (!finalType && attachmentUrl) {
+    finalType = detectAttachmentType(attachmentUrl);
+  }
 
   return {
     cleanBody,
     attachmentUrl: attachmentUrl || undefined,
     attachmentName: attachmentName || undefined,
-    attachmentType: finalType,
+    attachmentType: finalType || 'other',
   };
 }
 
