@@ -384,6 +384,29 @@ export function usePhases() {
   const [data, setData] = useState<ProjectPhase[]>(loadPhases);
 
   const fetchPhases = useCallback(async () => {
+    let ghPhases: ProjectPhase[] = [];
+    try {
+      const ghRes = await window.fetch('./phases.json?v=' + Date.now());
+      if (ghRes.ok) {
+        ghPhases = await ghRes.json();
+      } else {
+        const rawRes = await window.fetch(
+          'https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/phases.json?v=' + Date.now()
+        );
+        if (rawRes.ok) ghPhases = await rawRes.json();
+      }
+    } catch (e) {
+      console.warn('GitHub phases fetch:', e);
+    }
+
+    if (Array.isArray(ghPhases) && ghPhases.length === 5) {
+      setData(ghPhases);
+      try {
+        localStorage.setItem('pust_phases_cache', JSON.stringify(ghPhases));
+      } catch {}
+      return;
+    }
+
     try {
       const { data: resData } = await supabase.from('phases').select('*');
       if (resData && resData.length > 0) {
@@ -404,7 +427,7 @@ export function usePhases() {
         return;
       }
     } catch (e) {
-      // ignore fallback
+      // ignore
     }
 
     const local = loadPhases();
@@ -422,52 +445,56 @@ export function usePhases() {
     return () => window.removeEventListener('pust_phases_updated', handleUpdate);
   }, [fetchPhases, loadPhases]);
 
-  const updatePhaseStatus = useCallback(async (phaseNumber: number, newStatus: PhaseStatus) => {
-    let updatedList: ProjectPhase[] = [];
-    setData((prev) => {
-      updatedList = prev.map((p) => (p.number === phaseNumber ? { ...p, status: newStatus } : p));
+  const updatePhaseStatus = useCallback(
+    async (phaseNumber: number, newStatus: PhaseStatus) => {
+      const currentList = loadPhases();
+      const updatedList = currentList.map((p) =>
+        p.number === phaseNumber ? { ...p, status: newStatus } : p
+      );
+
+      setData(updatedList);
       try {
         localStorage.setItem('pust_phases_cache', JSON.stringify(updatedList));
       } catch {}
       window.dispatchEvent(new Event('pust_phases_updated'));
-      return updatedList;
-    });
 
-    try {
-      await supabase.from('phases').upsert(
-        {
-          number: phaseNumber,
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'number' }
-      );
-    } catch (e) {
-      console.warn('Supabase phase update error:', e);
-    }
-
-    try {
-      const activePhase = updatedList.find((p) => p.status === 'in-progress');
-      if (activePhase) {
-        await supabase
-          .from('project_info')
-          .update({
-            metric1_value: `Phase ${activePhase.number} of 5`,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', 1);
+      try {
+        const token = getStoredGitHubToken();
+        if (token) {
+          await pushPhasesToGitHub(updatedList, token);
+        }
+      } catch (e) {
+        console.warn('GitHub phase push:', e);
       }
-    } catch (e) {
-      // ignore
-    }
 
-    try {
-      const token = getStoredGitHubToken();
-      if (token) await pushPhasesToGitHub(updatedList, token);
-    } catch (e) {
-      // ignore
-    }
-  }, []);
+      try {
+        await supabase.from('phases').upsert(
+          {
+            number: phaseNumber,
+            status: newStatus,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'number' }
+        );
+      } catch (e) {
+        console.warn('Supabase phase update error:', e);
+      }
+
+      try {
+        const activePhase = updatedList.find((p) => p.status === 'in-progress');
+        if (activePhase) {
+          await supabase
+            .from('project_info')
+            .update({
+              metric1_value: `Phase ${activePhase.number} of 5`,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', 1);
+        }
+      } catch (e) {}
+    },
+    [loadPhases]
+  );
 
   return { data, updatePhaseStatus, refresh: fetchPhases };
 }
