@@ -15,7 +15,7 @@
     "number": 2,
     "title": "Hyperspectral Hardware Assembly & Calibration",
     "duration": "Months 5 – 9",
-    "status": "in-progress",
+    "status": "completed",
     "description": "Custom imaging system assembly, spectral calibration across target bands, and agricultural sample database creation.",
     "deliverables": [
       "Custom HSI Hardware Rig",
@@ -39,7 +39,7 @@
     "number": 4,
     "title": "Consumer Software & Mobile App Integration",
     "duration": "Months 16 – 20",
-    "status": "completed",
+    "status": "upcoming",
     "description": "Developing user-friendly web and mobile applications for real-time agricultural product assessment in the field.",
     "deliverables": [
       "Mobile Inspection App",
