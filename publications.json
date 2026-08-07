@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "id": "7df1e169-4d12-42b7-831d-5a0cf63921b6",
+    "title": "demo",
+    "authors": "dummy",
+    "venue": "a",
+    "year": "2026",
+    "type": "journal",
+    "badge": "Q1 Journal",
+    "abstract": "",
+    "bibtex": "",
+    "created_at": "2026-08-07T21:28:08.986Z",
+    "updated_at": "2026-08-07T21:28:09.339Z"
+  }
+]
