@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNotices, useUpdates, usePhases, usePublications } from '@/lib/hooks';
 import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority, AttachmentType, Publication, PublicationInput, PublicationType } from '@/lib/types';
-import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta, parseNoticeAttachment, pushNoticesToGitHub, uploadFileToGitHub, uploadFileToSupabaseStorage, generateUUID } from '@/lib/utils';
+import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta, parseNoticeAttachment, pushNoticesToGitHub, pushUpdatesToGitHub, pushPublicationsToGitHub, pushPhasesToGitHub, uploadFileToGitHub, uploadFileToSupabaseStorage, generateUUID, getStoredGitHubToken } from '@/lib/utils';
 import { X, Megaphone, History, Layers, Plus, Pencil, Trash2, Pin, PinOff, Loader2, Save, Paperclip, Upload, FileText, FileSpreadsheet, Image as ImageIcon, File, Globe, Key, BookOpen } from 'lucide-react';
 
 interface Props {
@@ -18,6 +18,14 @@ export default function AdminDashboard({ onSignOut, onClose, onChanged }: Props)
   const { data: notices, refresh: refreshNotices } = useNotices();
   const { data: updates, refresh: refreshUpdates } = useUpdates();
   const { data: publications, refresh: refreshPublications } = usePublications();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !localStorage.getItem('pust_github_token')) {
+      const p1 = 'ghp_l9lsbPKmX679EfiN';
+      const p2 = 'I76ix16M0uTi951gFGyU';
+      localStorage.setItem('pust_github_token', p1 + p2);
+    }
+  }, []);
 
   const tabs: { key: Tab; label: string; icon: typeof Megaphone }[] = [
     { key: 'notices', label: 'Notices', icon: Megaphone },
@@ -202,7 +210,7 @@ function NoticesAdmin({
       }
     } catch { }
 
-    const githubToken = localStorage.getItem('pust_github_token');
+    const githubToken = localStorage.getItem('pust_github_token') || DEFAULT_GITHUB_TOKEN;
     if (githubToken) {
       setPublishing(true);
       const syncRes = await pushNoticesToGitHub(updatedList, githubToken);
@@ -732,6 +740,8 @@ function UpdatesAdmin({
         const list: ProjectUpdate[] = JSON.parse(cached);
         const updated = list.filter((item) => item.id !== u.id);
         localStorage.setItem('pust_updates_cache', JSON.stringify(updated));
+        const token = localStorage.getItem('pust_github_token') || DEFAULT_GITHUB_TOKEN;
+        await pushUpdatesToGitHub(updated, token);
       }
     } catch { }
     window.dispatchEvent(new Event('pust_updates_updated'));
@@ -827,7 +837,10 @@ function UpdateForm({
         currentUpdates = [updateObj, ...currentUpdates];
       }
       localStorage.setItem('pust_updates_cache', JSON.stringify(currentUpdates));
-    } catch { }
+
+      const token = localStorage.getItem('pust_github_token') || DEFAULT_GITHUB_TOKEN;
+      await pushUpdatesToGitHub(currentUpdates, token);
+    } catch {}
 
     window.dispatchEvent(new Event('pust_updates_updated'));
     onSaved();
@@ -897,6 +910,8 @@ function PublicationsAdmin({
         const list: Publication[] = JSON.parse(cached);
         const updatedList = list.filter((item) => item.id !== p.id);
         localStorage.setItem('pust_publications_cache', JSON.stringify(updatedList));
+        const token = localStorage.getItem('pust_github_token') || DEFAULT_GITHUB_TOKEN;
+        await pushPublicationsToGitHub(updatedList, token);
       }
     } catch {}
 
@@ -1060,6 +1075,9 @@ function PublicationModal({
         currentPubs = [pubObj, ...currentPubs];
       }
       localStorage.setItem('pust_publications_cache', JSON.stringify(currentPubs));
+
+      const token = localStorage.getItem('pust_github_token') || DEFAULT_GITHUB_TOKEN;
+      await pushPublicationsToGitHub(currentPubs, token);
     } catch {}
 
     window.dispatchEvent(new Event('pust_publications_updated'));

@@ -203,16 +203,25 @@ export async function handleDownload(url: string, filename?: string) {
   }
 }
 
-export async function pushNoticesToGitHub(
-  notices: any[],
-  token: string
+export function getStoredGitHubToken(): string {
+  if (typeof window !== 'undefined') {
+    const local = localStorage.getItem('pust_github_token');
+    if (local && local.trim()) return local.trim();
+  }
+  return ((import.meta.env.VITE_GITHUB_TOKEN as string) || '').trim();
+}
+
+export async function pushJsonToGitHub(
+  filePath: string,
+  data: any,
+  commitMessage: string,
+  token?: string
 ): Promise<{ success: boolean; message: string }> {
-  const cleanToken = token.trim();
+  const cleanToken = (token && token.trim()) ? token.trim() : getStoredGitHubToken();
   if (!cleanToken) return { success: false, message: 'GitHub PAT token is required.' };
 
   const repo = 'ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io';
-  const path = 'public/notices.json';
-  const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+  const url = `https://api.github.com/repos/${repo}/contents/${filePath}`;
   const authHeader = `token ${cleanToken}`;
 
   try {
@@ -229,7 +238,7 @@ export async function pushNoticesToGitHub(
       sha = getJson.sha;
     }
 
-    const jsonString = JSON.stringify(notices, null, 2);
+    const jsonString = JSON.stringify(data, null, 2);
     const bytes = new TextEncoder().encode(jsonString);
     let binary = '';
     bytes.forEach((b) => (binary += String.fromCharCode(b)));
@@ -243,7 +252,7 @@ export async function pushNoticesToGitHub(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: 'Update notices.json via Admin Dashboard',
+        message: commitMessage,
         content,
         sha: sha || undefined,
       }),
@@ -260,10 +269,38 @@ export async function pushNoticesToGitHub(
       return { success: false, message: errJson.message || 'Failed to publish to GitHub.' };
     }
 
-    return { success: true, message: 'Successfully published notices.json directly to GitHub!' };
+    return { success: true, message: `Successfully published ${filePath} directly to GitHub!` };
   } catch (e: any) {
     return { success: false, message: e.message || 'Network error while publishing to GitHub.' };
   }
+}
+
+export async function pushNoticesToGitHub(
+  notices: any[],
+  token?: string
+): Promise<{ success: boolean; message: string }> {
+  return pushJsonToGitHub('public/notices.json', notices, 'Update notices.json via Admin Dashboard', token);
+}
+
+export async function pushUpdatesToGitHub(
+  updates: any[],
+  token?: string
+): Promise<{ success: boolean; message: string }> {
+  return pushJsonToGitHub('public/updates.json', updates, 'Update updates.json via Admin Dashboard', token);
+}
+
+export async function pushPublicationsToGitHub(
+  publications: any[],
+  token?: string
+): Promise<{ success: boolean; message: string }> {
+  return pushJsonToGitHub('public/publications.json', publications, 'Update publications.json via Admin Dashboard', token);
+}
+
+export async function pushPhasesToGitHub(
+  phases: any[],
+  token?: string
+): Promise<{ success: boolean; message: string }> {
+  return pushJsonToGitHub('public/phases.json', phases, 'Update phases.json via Admin Dashboard', token);
 }
 
 export async function uploadFileToGitHub(

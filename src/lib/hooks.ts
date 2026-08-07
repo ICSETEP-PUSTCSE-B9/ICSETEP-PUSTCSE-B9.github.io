@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import type { ProjectInfo, Notice, ProjectUpdate, ProjectPhase, PhaseStatus, Publication } from './types';
+import { pushPhasesToGitHub, getStoredGitHubToken } from './utils';
 
 export function useProjectInfo() {
   const [data, setData] = useState<ProjectInfo | null>(() => {
@@ -244,6 +245,21 @@ export function useUpdates() {
     setLoading(true);
     setError(null);
     try {
+      let ghUpdates: ProjectUpdate[] = [];
+      try {
+        const ghRes = await window.fetch('./updates.json?v=' + Date.now());
+        if (ghRes.ok) {
+          ghUpdates = await ghRes.json();
+        } else {
+          const rawRes = await window.fetch(
+            'https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/updates.json?v=' + Date.now()
+          );
+          if (rawRes.ok) ghUpdates = await rawRes.json();
+        }
+      } catch (e) {
+        console.warn('GitHub updates fetch:', e);
+      }
+
       const { data: resData, error: resError } = await supabase
         .from('updates')
         .select('*')
@@ -252,6 +268,11 @@ export function useUpdates() {
       const localList = loadUpdates();
 
       const map = new Map<string, ProjectUpdate>();
+      if (Array.isArray(ghUpdates)) {
+        ghUpdates.forEach((u) => {
+          if (u && u.id) map.set(u.id, u);
+        });
+      }
       if (resData && resData.length > 0) {
         (resData as ProjectUpdate[]).forEach((u) => {
           const titleLower = (u.title || '').toLowerCase();
@@ -439,6 +460,13 @@ export function usePhases() {
     } catch (e) {
       // ignore
     }
+
+    try {
+      const token = getStoredGitHubToken();
+      if (token) await pushPhasesToGitHub(updatedList, token);
+    } catch (e) {
+      // ignore
+    }
   }, []);
 
   return { data, updatePhaseStatus, refresh: fetchPhases };
@@ -465,6 +493,21 @@ export function usePublications() {
     setLoading(true);
     setError(null);
     try {
+      let ghPubs: Publication[] = [];
+      try {
+        const ghRes = await window.fetch('./publications.json?v=' + Date.now());
+        if (ghRes.ok) {
+          ghPubs = await ghRes.json();
+        } else {
+          const rawRes = await window.fetch(
+            'https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/publications.json?v=' + Date.now()
+          );
+          if (rawRes.ok) ghPubs = await rawRes.json();
+        }
+      } catch (e) {
+        console.warn('GitHub publications fetch:', e);
+      }
+
       const { data: resData, error: resError } = await supabase
         .from('publications')
         .select('*')
@@ -475,6 +518,13 @@ export function usePublications() {
       const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
 
       const map = new Map<string, Publication>();
+      if (Array.isArray(ghPubs)) {
+        ghPubs.forEach((p) => {
+          if (p && p.id && !deletedIds.has(p.id)) {
+            map.set(p.id, p);
+          }
+        });
+      }
       if (resData && resData.length > 0) {
         (resData as Publication[]).forEach((p) => {
           if (!deletedIds.has(p.id)) {
