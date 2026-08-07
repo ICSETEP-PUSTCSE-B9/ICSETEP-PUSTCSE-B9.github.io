@@ -210,7 +210,7 @@ function NoticesAdmin({
       }
     } catch { }
 
-    const githubToken = localStorage.getItem('pust_github_token') || DEFAULT_GITHUB_TOKEN;
+    const githubToken = getStoredGitHubToken();
     if (githubToken) {
       setPublishing(true);
       const syncRes = await pushNoticesToGitHub(updatedList, githubToken);
@@ -729,13 +729,36 @@ function UpdatesAdmin({
   const [editing, setEditing] = useState<ProjectUpdate | null>(null);
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [githubToken, setGithubToken] = useState<string>(() => localStorage.getItem('pust_github_token') || '');
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(() => !localStorage.getItem('pust_github_token'));
   const [publishing, setPublishing] = useState(false);
   const [publishMessage, setPublishMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const saveToken = (val: string) => {
+    setGithubToken(val);
+    localStorage.setItem('pust_github_token', val);
+  };
+
+  const handleExportUpdates = () => {
+    const jsonStr = JSON.stringify(updates, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'updates.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handlePushGitHub = async () => {
+    const token = getStoredGitHubToken() || githubToken;
+    if (!token) {
+      setShowTokenInput(true);
+      setPublishMessage({ type: 'error', text: 'Please enter a GitHub Personal Access Token (PAT) first.' });
+      return;
+    }
     setPublishing(true);
     setPublishMessage(null);
-    const token = getStoredGitHubToken();
     const res = await pushUpdatesToGitHub(updates, token);
     setPublishing(false);
     if (res.success) {
@@ -746,7 +769,7 @@ function UpdatesAdmin({
   };
 
   const remove = async (u: ProjectUpdate) => {
-    if (!confirm(`Delete update "${u.title}"?`)) return;
+    if (!confirm(`Delete update "${u.title}"? This cannot be undone.`)) return;
     setBusyId(u.id);
 
     try {
@@ -765,14 +788,21 @@ function UpdatesAdmin({
     const remaining = updates.filter((item) => item.id !== u.id);
     try {
       localStorage.setItem('pust_updates_cache', JSON.stringify(remaining));
-      const token = getStoredGitHubToken();
+      const token = getStoredGitHubToken() || githubToken;
       if (token) {
         setPublishing(true);
         const res = await pushUpdatesToGitHub(remaining, token);
         setPublishing(false);
         if (res.success) {
           setPublishMessage({ type: 'success', text: 'Update deleted and synced across all devices worldwide!' });
+        } else {
+          setPublishMessage({ type: 'error', text: 'Update deleted locally. GitHub Sync failed: ' + res.message });
         }
+      } else {
+        setPublishMessage({
+          type: 'error',
+          text: 'Update deleted locally. Enter your GitHub PAT Token above to sync deletion across all devices worldwide.',
+        });
       }
     } catch {}
 
@@ -784,43 +814,81 @@ function UpdatesAdmin({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/60 p-4">
-        <div>
-          <h3 className="font-display text-base font-bold text-ink-900">Project Updates Control</h3>
-          <p className="text-xs text-ink-600">
-            Publish milestones, ceremony photos, and research progress logs.
-          </p>
+      <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50/60 p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-700">
+              <Globe className="h-4 w-4 text-brand-600" /> GitHub Cloud Synchronization
+            </span>
+            <p className="mt-0.5 text-xs font-semibold text-ink-900">
+              {updates.length} project updates published for all visitors across all devices
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowTokenInput((v) => !v)}
+              className="flex items-center gap-1 rounded-lg border border-ink-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50 shadow-sm cursor-pointer"
+              title="Configure GitHub Personal Access Token for 1-Click Sync"
+            >
+              <Key className="h-3.5 w-3.5 text-amber-600" /> PAT Token
+            </button>
+            <button
+              type="button"
+              onClick={handleExportUpdates}
+              title="Download updates.json to commit manually to GitHub"
+              className="flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50 shadow-sm cursor-pointer"
+            >
+              <Save className="h-3.5 w-3.5 text-brand-600" /> Export JSON
+            </button>
+            <button
+              type="button"
+              onClick={handlePushGitHub}
+              disabled={publishing}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60 shadow-sm cursor-pointer"
+            >
+              {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+              {publishing ? 'Publishing…' : '1-Click GitHub Sync'}
+            </button>
+            <button
+              onClick={() => setCreating(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 shadow-sm cursor-pointer"
+            >
+              <Plus className="h-4 w-4" /> New Update
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handlePushGitHub}
-            disabled={publishing}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer shadow-sm"
-          >
-            {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
-            {publishing ? 'Publishing…' : 'Publish Live to Website'}
-          </button>
-          <button
-            onClick={() => setCreating(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700 cursor-pointer shadow-sm"
-          >
-            <Plus className="h-4 w-4" /> New Update
-          </button>
-        </div>
-      </div>
 
-      {publishMessage && (
-        <div
-          className={`mb-4 rounded-xl p-3.5 text-xs font-semibold ring-1 ring-inset ${
-            publishMessage.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
-              : 'bg-red-50 text-red-800 ring-red-200'
-          }`}
-        >
-          {publishMessage.text}
-        </div>
-      )}
+        {showTokenInput && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3 space-y-2 animate-fade-in">
+            <label className="block text-xs font-bold text-ink-800">
+              🔑 GitHub Personal Access Token (PAT):
+            </label>
+            <input
+              type="password"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              value={githubToken}
+              onChange={(e) => saveToken(e.target.value)}
+              className="w-full rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-mono text-ink-900 outline-none focus:border-brand-500"
+            />
+            <p className="text-[11px] text-ink-500">
+              Generating a token with <span className="font-semibold text-ink-800">repo</span> scope allows 1-click cloud sync of project updates to all devices worldwide automatically.
+            </p>
+          </div>
+        )}
+
+        {publishMessage && (
+          <div
+            className={`mt-3 rounded-lg px-3 py-2 text-xs font-semibold ${
+              publishMessage.type === 'success'
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                : 'bg-red-100 text-red-800 border border-red-300'
+            }`}
+          >
+            {publishMessage.text}
+          </div>
+        )}
+      </div>
 
       <div className="space-y-3">
         {updates.map((u) => (
@@ -898,8 +966,8 @@ function UpdateForm({
       }
       localStorage.setItem('pust_updates_cache', JSON.stringify(currentUpdates));
 
-      const token = localStorage.getItem('pust_github_token') || DEFAULT_GITHUB_TOKEN;
-      await pushUpdatesToGitHub(currentUpdates, token);
+      const token = getStoredGitHubToken();
+      if (token) await pushUpdatesToGitHub(currentUpdates, token);
     } catch {}
 
     window.dispatchEvent(new Event('pust_updates_updated'));
@@ -951,13 +1019,36 @@ function PublicationsAdmin({
   const [editing, setEditing] = useState<Publication | null>(null);
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [githubToken, setGithubToken] = useState<string>(() => localStorage.getItem('pust_github_token') || '');
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(() => !localStorage.getItem('pust_github_token'));
   const [publishing, setPublishing] = useState(false);
   const [publishMessage, setPublishMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const saveToken = (val: string) => {
+    setGithubToken(val);
+    localStorage.setItem('pust_github_token', val);
+  };
+
+  const handleExportPublications = () => {
+    const jsonStr = JSON.stringify(publications, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'publications.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handlePushGitHub = async () => {
+    const token = getStoredGitHubToken() || githubToken;
+    if (!token) {
+      setShowTokenInput(true);
+      setPublishMessage({ type: 'error', text: 'Please enter a GitHub Personal Access Token (PAT) first.' });
+      return;
+    }
     setPublishing(true);
     setPublishMessage(null);
-    const token = getStoredGitHubToken();
     const res = await pushPublicationsToGitHub(publications, token);
     setPublishing(false);
     if (res.success) {
@@ -987,14 +1078,21 @@ function PublicationsAdmin({
     const remaining = publications.filter((item) => item.id !== p.id);
     try {
       localStorage.setItem('pust_publications_cache', JSON.stringify(remaining));
-      const token = getStoredGitHubToken();
+      const token = getStoredGitHubToken() || githubToken;
       if (token) {
         setPublishing(true);
         const res = await pushPublicationsToGitHub(remaining, token);
         setPublishing(false);
         if (res.success) {
           setPublishMessage({ type: 'success', text: 'Publication deleted and synced across all devices worldwide!' });
+        } else {
+          setPublishMessage({ type: 'error', text: 'Publication deleted locally. GitHub Sync failed: ' + res.message });
         }
+      } else {
+        setPublishMessage({
+          type: 'error',
+          text: 'Publication deleted locally. Enter your GitHub PAT Token above to sync deletion across all devices worldwide.',
+        });
       }
     } catch {}
 
@@ -1006,43 +1104,81 @@ function PublicationsAdmin({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/60 p-4">
-        <div>
-          <h3 className="font-display text-base font-bold text-ink-900">Manage Publications & Patents</h3>
-          <p className="text-xs text-ink-600">
-            Add or edit research papers, journal articles, and patents.
-          </p>
+      <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50/60 p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-700">
+              <Globe className="h-4 w-4 text-brand-600" /> GitHub Cloud Synchronization
+            </span>
+            <p className="mt-0.5 text-xs font-semibold text-ink-900">
+              {publications.length} publications & patents published for all visitors across all devices
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowTokenInput((v) => !v)}
+              className="flex items-center gap-1 rounded-lg border border-ink-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50 shadow-sm cursor-pointer"
+              title="Configure GitHub Personal Access Token for 1-Click Sync"
+            >
+              <Key className="h-3.5 w-3.5 text-amber-600" /> PAT Token
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPublications}
+              title="Download publications.json to commit manually to GitHub"
+              className="flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50 shadow-sm cursor-pointer"
+            >
+              <Save className="h-3.5 w-3.5 text-brand-600" /> Export JSON
+            </button>
+            <button
+              type="button"
+              onClick={handlePushGitHub}
+              disabled={publishing}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60 shadow-sm cursor-pointer"
+            >
+              {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+              {publishing ? 'Publishing…' : '1-Click GitHub Sync'}
+            </button>
+            <button
+              onClick={() => setCreating(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 shadow-sm cursor-pointer"
+            >
+              <Plus className="h-4 w-4" /> New Publication
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handlePushGitHub}
-            disabled={publishing}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer shadow-sm"
-          >
-            {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
-            {publishing ? 'Publishing…' : 'Publish Live to Website'}
-          </button>
-          <button
-            onClick={() => setCreating(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 cursor-pointer"
-          >
-            <Plus className="h-4 w-4" /> New Publication
-          </button>
-        </div>
-      </div>
 
-      {publishMessage && (
-        <div
-          className={`mb-4 rounded-xl p-3.5 text-xs font-semibold ring-1 ring-inset ${
-            publishMessage.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
-              : 'bg-red-50 text-red-800 ring-red-200'
-          }`}
-        >
-          {publishMessage.text}
-        </div>
-      )}
+        {showTokenInput && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3 space-y-2 animate-fade-in">
+            <label className="block text-xs font-bold text-ink-800">
+              🔑 GitHub Personal Access Token (PAT):
+            </label>
+            <input
+              type="password"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              value={githubToken}
+              onChange={(e) => saveToken(e.target.value)}
+              className="w-full rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-mono text-ink-900 outline-none focus:border-brand-500"
+            />
+            <p className="text-[11px] text-ink-500">
+              Generating a token with <span className="font-semibold text-ink-800">repo</span> scope allows 1-click cloud sync of publications & patents to all devices worldwide automatically.
+            </p>
+          </div>
+        )}
+
+        {publishMessage && (
+          <div
+            className={`mt-3 rounded-lg px-3 py-2 text-xs font-semibold ${
+              publishMessage.type === 'success'
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                : 'bg-red-100 text-red-800 border border-red-300'
+            }`}
+          >
+            {publishMessage.text}
+          </div>
+        )}
+      </div>
 
       {publications.length === 0 ? (
         <div className="rounded-xl border border-dashed border-ink-200 p-8 text-center text-sm text-ink-500">
@@ -1257,13 +1393,36 @@ function PublicationModal({
 
 function PhasesAdmin({ onChanged }: { onChanged: () => void }) {
   const { data: phases, updatePhaseStatus } = usePhases();
+  const [githubToken, setGithubToken] = useState<string>(() => localStorage.getItem('pust_github_token') || '');
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(() => !localStorage.getItem('pust_github_token'));
   const [publishing, setPublishing] = useState(false);
   const [publishMessage, setPublishMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const saveToken = (val: string) => {
+    setGithubToken(val);
+    localStorage.setItem('pust_github_token', val);
+  };
+
+  const handleExportPhases = () => {
+    const jsonStr = JSON.stringify(phases, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'phases.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handlePushGitHub = async () => {
+    const token = getStoredGitHubToken() || githubToken;
+    if (!token) {
+      setShowTokenInput(true);
+      setPublishMessage({ type: 'error', text: 'Please enter a GitHub Personal Access Token (PAT) first.' });
+      return;
+    }
     setPublishing(true);
     setPublishMessage(null);
-    const token = getStoredGitHubToken();
     const res = await pushPhasesToGitHub(phases, token);
     setPublishing(false);
     if (res.success) {
@@ -1288,35 +1447,75 @@ function PhasesAdmin({ onChanged }: { onChanged: () => void }) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/60 p-4">
-        <div>
-          <h3 className="font-display text-base font-bold text-ink-900">Project Milestone Phases Control</h3>
-          <p className="text-xs text-ink-600">
-            Select status for each phase (Completed, Active, or Upcoming). Changes immediately update the live roadmap for all users globally.
-          </p>
+      <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50/60 p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-700">
+              <Globe className="h-4 w-4 text-brand-600" /> GitHub Cloud Synchronization
+            </span>
+            <p className="mt-0.5 text-xs font-semibold text-ink-900">
+              5 Project Milestone Phases configured for all visitors across all devices
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowTokenInput((v) => !v)}
+              className="flex items-center gap-1 rounded-lg border border-ink-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50 shadow-sm cursor-pointer"
+              title="Configure GitHub Personal Access Token for 1-Click Sync"
+            >
+              <Key className="h-3.5 w-3.5 text-amber-600" /> PAT Token
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPhases}
+              title="Download phases.json to commit manually to GitHub"
+              className="flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50 shadow-sm cursor-pointer"
+            >
+              <Save className="h-3.5 w-3.5 text-brand-600" /> Export JSON
+            </button>
+            <button
+              type="button"
+              onClick={handlePushGitHub}
+              disabled={publishing}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60 shadow-sm cursor-pointer"
+            >
+              {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+              {publishing ? 'Publishing…' : '1-Click GitHub Sync'}
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={handlePushGitHub}
-          disabled={publishing}
-          className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer shadow-sm shrink-0"
-        >
-          {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
-          {publishing ? 'Publishing…' : 'Publish Live to Website'}
-        </button>
-      </div>
 
-      {publishMessage && (
-        <div
-          className={`mb-4 rounded-xl p-3.5 text-xs font-semibold ring-1 ring-inset ${
-            publishMessage.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
-              : 'bg-red-50 text-red-800 ring-red-200'
-          }`}
-        >
-          {publishMessage.text}
-        </div>
-      )}
+        {showTokenInput && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3 space-y-2 animate-fade-in">
+            <label className="block text-xs font-bold text-ink-800">
+              🔑 GitHub Personal Access Token (PAT):
+            </label>
+            <input
+              type="password"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              value={githubToken}
+              onChange={(e) => saveToken(e.target.value)}
+              className="w-full rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-mono text-ink-900 outline-none focus:border-brand-500"
+            />
+            <p className="text-[11px] text-ink-500">
+              Generating a token with <span className="font-semibold text-ink-800">repo</span> scope allows 1-click cloud sync of project milestone phase statuses to all devices worldwide automatically.
+            </p>
+          </div>
+        )}
+
+        {publishMessage && (
+          <div
+            className={`mt-3 rounded-lg px-3 py-2 text-xs font-semibold ${
+              publishMessage.type === 'success'
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                : 'bg-red-100 text-red-800 border border-red-300'
+            }`}
+          >
+            {publishMessage.text}
+          </div>
+        )}
+      </div>
 
       <div className="space-y-3">
         {phases.map((p) => (
