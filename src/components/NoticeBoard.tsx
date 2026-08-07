@@ -98,12 +98,12 @@ export default function NoticeBoard({ notices }: Props) {
                             </div>
                           </a>
                           {attachmentName && (
-                            <div className="flex items-center justify-between border-t border-ink-100 bg-white px-3 py-2 text-xs text-ink-600">
-                              <span className="truncate font-medium max-w-[200px] sm:max-w-[280px]">{attachmentName}</span>
+                            <div className="flex flex-wrap items-center justify-between border-t border-ink-100 bg-white px-3 py-2 text-xs text-ink-600 gap-2">
+                              <span className="truncate font-medium max-w-full sm:max-w-[260px]">{attachmentName}</span>
                               <button
                                 type="button"
                                 onClick={() => handleDownload(attachmentUrl, attachmentName)}
-                                className="flex items-center gap-1 font-semibold text-brand-600 hover:text-brand-700 cursor-pointer"
+                                className="flex items-center gap-1 font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
                               >
                                 <Download className="h-3.5 w-3.5" /> Download
                               </button>
@@ -111,13 +111,13 @@ export default function NoticeBoard({ notices }: Props) {
                           )}
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between rounded-xl border border-ink-200 bg-ink-50/70 p-3.5 transition-colors hover:bg-ink-100/80">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-ink-200 bg-ink-50/70 p-3 sm:p-3.5 transition-colors hover:bg-ink-100/80">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
                             <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${meta.iconBg}`}>
                               <FileIcon className="h-5 w-5" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-semibold text-ink-900">
+                              <p className="truncate text-xs sm:text-sm font-semibold text-ink-900" title={attachmentName || 'Attached File'}>
                                 {attachmentName || 'Attached File'}
                               </p>
                               <span className={`inline-block mt-0.5 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${meta.badge}`}>
@@ -128,10 +128,10 @@ export default function NoticeBoard({ notices }: Props) {
                           <button
                             type="button"
                             onClick={() => handleDownload(attachmentUrl, attachmentName)}
-                            className="ml-3 flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 shadow-sm ring-1 ring-inset ring-ink-200 hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-300 transition-all cursor-pointer"
+                            className="flex w-full sm:w-auto shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand-600 sm:bg-white text-white sm:text-ink-700 px-3.5 py-2 sm:py-1.5 text-xs font-semibold shadow-sm ring-1 ring-inset ring-brand-600 sm:ring-ink-200 hover:bg-brand-700 sm:hover:bg-brand-50 sm:hover:text-brand-700 transition-all cursor-pointer"
                           >
                             <Download className="h-3.5 w-3.5" />
-                            <span>Download</span>
+                            <span>Download Attachment</span>
                           </button>
                         </div>
                       )}
