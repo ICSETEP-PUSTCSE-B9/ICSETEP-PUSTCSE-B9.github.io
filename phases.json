@@ -1,0 +1,42 @@
+[
+  {
+    "number": 1,
+    "title": "Project Inception",
+    "duration": "Months 1 – 4",
+    "status": "completed",
+    "description": "Grant agreement signing, project inception program, laboratory infrastructure establishment, and ethics approvals.",
+    "deliverables": ["Inception Ceremony & Orientation", "Lab Setup at Dept. of CSE, PUST", "Initial Optical Hardware Planning"]
+  },
+  {
+    "number": 2,
+    "title": "Hyperspectral Hardware Assembly & Calibration",
+    "duration": "Months 5 – 9",
+    "status": "in-progress",
+    "description": "Custom imaging system assembly, spectral calibration across target bands, and agricultural sample database creation.",
+    "deliverables": ["Custom HSI Hardware Rig", "Calibrated Optical Sensors", "Baseline Agricultural Image Dataset"]
+  },
+  {
+    "number": 3,
+    "title": "Deep Learning & XAI Model Development",
+    "duration": "Months 10 – 15",
+    "status": "upcoming",
+    "description": "Designing neural network architectures for spectral image reconstruction and Explainable AI (XAI) feature maps.",
+    "deliverables": ["Image Reconstruction Algorithm", "XAI Explainability Engine", "Q1 Journal Research Paper Drafts"]
+  },
+  {
+    "number": 4,
+    "title": "Mobile & Edge Hardware Integration",
+    "duration": "Months 16 – 20",
+    "status": "upcoming",
+    "description": "Deploying lightweight deep learning models onto mobile edge devices and building low-cost optical attachment prototypes.",
+    "deliverables": ["Lightweight Deep Learning Pipeline", "Mobile Optical Attachment Prototypes", "Mobile App Interface"]
+  },
+  {
+    "number": 5,
+    "title": "Field Validation, Stakeholder Dissemination & IP",
+    "duration": "Months 21 – 24",
+    "status": "upcoming",
+    "description": "Field validation with local farmers, final performance evaluation, stakeholder dissemination, and patent filing.",
+    "deliverables": ["Field Performance Report", "Stakeholder Dissemination Workshop", "Patent & Software Copyright Filing"]
+  }
+]
