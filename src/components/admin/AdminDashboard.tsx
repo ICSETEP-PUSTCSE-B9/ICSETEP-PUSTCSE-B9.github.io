@@ -729,6 +729,21 @@ function UpdatesAdmin({
   const [editing, setEditing] = useState<ProjectUpdate | null>(null);
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMessage, setPublishMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handlePushGitHub = async () => {
+    setPublishing(true);
+    setPublishMessage(null);
+    const token = getStoredGitHubToken();
+    const res = await pushUpdatesToGitHub(updates, token);
+    setPublishing(false);
+    if (res.success) {
+      setPublishMessage({ type: 'success', text: 'All project updates synced live across all devices worldwide!' });
+    } else {
+      setPublishMessage({ type: 'error', text: res.message });
+    }
+  };
 
   const remove = async (u: ProjectUpdate) => {
     if (!confirm(`Delete update "${u.title}"?`)) return;
@@ -752,7 +767,12 @@ function UpdatesAdmin({
       localStorage.setItem('pust_updates_cache', JSON.stringify(remaining));
       const token = getStoredGitHubToken();
       if (token) {
-        await pushUpdatesToGitHub(remaining, token);
+        setPublishing(true);
+        const res = await pushUpdatesToGitHub(remaining, token);
+        setPublishing(false);
+        if (res.success) {
+          setPublishMessage({ type: 'success', text: 'Update deleted and synced across all devices worldwide!' });
+        }
       }
     } catch {}
 
@@ -764,15 +784,43 @@ function UpdatesAdmin({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-ink-500">{updates.length} updates</p>
-        <button
-          onClick={() => setCreating(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-        >
-          <Plus className="h-4 w-4" /> New Update
-        </button>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/60 p-4">
+        <div>
+          <h3 className="font-display text-base font-bold text-ink-900">Project Updates Control</h3>
+          <p className="text-xs text-ink-600">
+            Publish milestones, ceremony photos, and research progress logs.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handlePushGitHub}
+            disabled={publishing}
+            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer shadow-sm"
+          >
+            {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+            {publishing ? 'Publishing…' : 'Publish Live to Website'}
+          </button>
+          <button
+            onClick={() => setCreating(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700 cursor-pointer shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> New Update
+          </button>
+        </div>
       </div>
+
+      {publishMessage && (
+        <div
+          className={`mb-4 rounded-xl p-3.5 text-xs font-semibold ring-1 ring-inset ${
+            publishMessage.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
+              : 'bg-red-50 text-red-800 ring-red-200'
+          }`}
+        >
+          {publishMessage.text}
+        </div>
+      )}
 
       <div className="space-y-3">
         {updates.map((u) => (
@@ -903,6 +951,21 @@ function PublicationsAdmin({
   const [editing, setEditing] = useState<Publication | null>(null);
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMessage, setPublishMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handlePushGitHub = async () => {
+    setPublishing(true);
+    setPublishMessage(null);
+    const token = getStoredGitHubToken();
+    const res = await pushPublicationsToGitHub(publications, token);
+    setPublishing(false);
+    if (res.success) {
+      setPublishMessage({ type: 'success', text: 'All publications synced live across all devices worldwide!' });
+    } else {
+      setPublishMessage({ type: 'error', text: res.message });
+    }
+  };
 
   const remove = async (p: Publication) => {
     if (!confirm(`Delete publication "${p.title}"? This cannot be undone.`)) return;
@@ -926,7 +989,12 @@ function PublicationsAdmin({
       localStorage.setItem('pust_publications_cache', JSON.stringify(remaining));
       const token = getStoredGitHubToken();
       if (token) {
-        await pushPublicationsToGitHub(remaining, token);
+        setPublishing(true);
+        const res = await pushPublicationsToGitHub(remaining, token);
+        setPublishing(false);
+        if (res.success) {
+          setPublishMessage({ type: 'success', text: 'Publication deleted and synced across all devices worldwide!' });
+        }
       }
     } catch {}
 
@@ -938,20 +1006,43 @@ function PublicationsAdmin({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/60 p-4">
         <div>
           <h3 className="font-display text-base font-bold text-ink-900">Manage Publications & Patents</h3>
-          <p className="text-xs text-ink-500">
-            Add or edit research papers, journal articles, and patents. Changes appear instantly across the website.
+          <p className="text-xs text-ink-600">
+            Add or edit research papers, journal articles, and patents.
           </p>
         </div>
-        <button
-          onClick={() => setCreating(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-700"
-        >
-          <Plus className="h-4 w-4" /> New Publication
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handlePushGitHub}
+            disabled={publishing}
+            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer shadow-sm"
+          >
+            {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+            {publishing ? 'Publishing…' : 'Publish Live to Website'}
+          </button>
+          <button
+            onClick={() => setCreating(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 cursor-pointer"
+          >
+            <Plus className="h-4 w-4" /> New Publication
+          </button>
+        </div>
       </div>
+
+      {publishMessage && (
+        <div
+          className={`mb-4 rounded-xl p-3.5 text-xs font-semibold ring-1 ring-inset ${
+            publishMessage.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
+              : 'bg-red-50 text-red-800 ring-red-200'
+          }`}
+        >
+          {publishMessage.text}
+        </div>
+      )}
 
       {publications.length === 0 ? (
         <div className="rounded-xl border border-dashed border-ink-200 p-8 text-center text-sm text-ink-500">
@@ -1091,8 +1182,8 @@ function PublicationModal({
       }
       localStorage.setItem('pust_publications_cache', JSON.stringify(currentPubs));
 
-      const token = localStorage.getItem('pust_github_token') || DEFAULT_GITHUB_TOKEN;
-      await pushPublicationsToGitHub(currentPubs, token);
+      const token = getStoredGitHubToken();
+      if (token) await pushPublicationsToGitHub(currentPubs, token);
     } catch {}
 
     window.dispatchEvent(new Event('pust_publications_updated'));
@@ -1166,15 +1257,66 @@ function PublicationModal({
 
 function PhasesAdmin({ onChanged }: { onChanged: () => void }) {
   const { data: phases, updatePhaseStatus } = usePhases();
+  const [publishing, setPublishing] = useState(false);
+  const [publishMessage, setPublishMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handlePushGitHub = async () => {
+    setPublishing(true);
+    setPublishMessage(null);
+    const token = getStoredGitHubToken();
+    const res = await pushPhasesToGitHub(phases, token);
+    setPublishing(false);
+    if (res.success) {
+      setPublishMessage({ type: 'success', text: 'All project milestone phase statuses synced live across all devices worldwide!' });
+    } else {
+      setPublishMessage({ type: 'error', text: res.message });
+    }
+  };
+
+  const handlePhaseStatusChange = async (phaseNumber: number, newStatus: PhaseStatus) => {
+    setPublishing(true);
+    setPublishMessage(null);
+    await updatePhaseStatus(phaseNumber, newStatus);
+    onChanged();
+    setPublishing(false);
+    const label = newStatus === 'completed' ? 'Completed' : newStatus === 'in-progress' ? 'Active' : 'Upcoming';
+    setPublishMessage({
+      type: 'success',
+      text: `Phase ${phaseNumber} set to "${label}" and synced live across all devices worldwide!`,
+    });
+  };
 
   return (
     <div>
-      <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50/60 p-4">
-        <h3 className="font-display text-base font-bold text-ink-900">Project Milestone Phases Control</h3>
-        <p className="mt-1 text-xs text-ink-600">
-          Select status for each phase (Completed, Active / In-Progress, or Upcoming). Changes immediately update the live project roadmap for all users globally.
-        </p>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/60 p-4">
+        <div>
+          <h3 className="font-display text-base font-bold text-ink-900">Project Milestone Phases Control</h3>
+          <p className="text-xs text-ink-600">
+            Select status for each phase (Completed, Active, or Upcoming). Changes immediately update the live roadmap for all users globally.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handlePushGitHub}
+          disabled={publishing}
+          className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer shadow-sm shrink-0"
+        >
+          {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+          {publishing ? 'Publishing…' : 'Publish Live to Website'}
+        </button>
       </div>
+
+      {publishMessage && (
+        <div
+          className={`mb-4 rounded-xl p-3.5 text-xs font-semibold ring-1 ring-inset ${
+            publishMessage.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
+              : 'bg-red-50 text-red-800 ring-red-200'
+          }`}
+        >
+          {publishMessage.text}
+        </div>
+      )}
 
       <div className="space-y-3">
         {phases.map((p) => (
@@ -1196,11 +1338,8 @@ function PhasesAdmin({ onChanged }: { onChanged: () => void }) {
               <div className="flex items-center gap-1.5 shrink-0 pt-2 sm:pt-0">
                 <button
                   type="button"
-                  onClick={() => {
-                    updatePhaseStatus(p.number, 'completed');
-                    onChanged();
-                  }}
-                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${
+                  onClick={() => handlePhaseStatusChange(p.number, 'completed')}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                     p.status === 'completed'
                       ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300'
                       : 'bg-ink-100 text-ink-600 hover:bg-emerald-100 hover:text-emerald-800'
@@ -1210,11 +1349,8 @@ function PhasesAdmin({ onChanged }: { onChanged: () => void }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    updatePhaseStatus(p.number, 'in-progress');
-                    onChanged();
-                  }}
-                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${
+                  onClick={() => handlePhaseStatusChange(p.number, 'in-progress')}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                     p.status === 'in-progress'
                       ? 'bg-brand-600 text-white shadow-sm ring-2 ring-brand-300 animate-pulse-soft'
                       : 'bg-ink-100 text-ink-600 hover:bg-brand-100 hover:text-brand-800'
@@ -1224,11 +1360,8 @@ function PhasesAdmin({ onChanged }: { onChanged: () => void }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    updatePhaseStatus(p.number, 'upcoming');
-                    onChanged();
-                  }}
-                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${
+                  onClick={() => handlePhaseStatusChange(p.number, 'upcoming')}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                     p.status === 'upcoming'
                       ? 'bg-ink-700 text-white shadow-sm ring-2 ring-ink-300'
                       : 'bg-ink-100 text-ink-600 hover:bg-ink-200 hover:text-ink-900'
