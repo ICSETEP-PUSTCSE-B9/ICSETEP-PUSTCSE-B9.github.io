@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "id": "ff1e055a-f3b4-4c72-9f91-055f6ae1eaaf",
+    "title": "a",
+    "authors": "nb",
+    "venue": "b",
+    "year": "2026",
+    "type": "journal",
+    "badge": "Q1 Journal",
+    "abstract": "",
+    "bibtex": "",
+    "created_at": "2026-08-07T22:01:44.394Z",
+    "updated_at": "2026-08-07T22:01:44.580Z"
+  }
+]
