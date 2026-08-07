@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNotices, useUpdates, usePhases, usePublications } from '@/lib/hooks';
 import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority, AttachmentType, Publication, PublicationInput, PublicationType } from '@/lib/types';
