@@ -27,7 +27,7 @@
     "number": 3,
     "title": "Deep Learning & XAI Model Development",
     "duration": "Months 10 – 15",
-    "status": "upcoming",
+    "status": "completed",
     "description": "Designing neural network architectures for spectral image reconstruction and Explainable AI (XAI) feature maps.",
     "deliverables": [
       "Image Reconstruction Algorithm",
