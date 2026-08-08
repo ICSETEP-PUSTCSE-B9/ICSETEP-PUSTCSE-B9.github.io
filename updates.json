@@ -1,5 +1,12 @@
 [
   {
+    "id": "update-1786174502197",
+    "title": "aaa",
+    "body": "ss",
+    "created_at": "2026-08-08T00:00:00.000Z",
+    "updated_at": "2026-08-08T07:35:02.197Z"
+  },
+  {
     "id": "default-update-contract-signing",
     "title": "First eGP Contract Signing Ceremony",
     "body": "Official eGP contract signing ceremony for research laboratory equipment procurement under ICSETEP sub-project RDG B9 at Department of CSE, PUST.",
@@ -14,22 +21,10 @@
     "updated_at": "2026-05-16T10:00:00.000Z"
   },
   {
-    "id": "24bcb16a-79a3-4994-853c-c182dd982125",
-    "title": "Contract signing with  eGP",
-    "body": "First eGP Contract signing Ceremony at ICSETEP project at the Dept. of Computer Science and Engineering, Pabna University of Science and Technology.",
-    "created_at": "2026-02-08T00:00:00+00:00"
-  },
-  {
     "id": "default-update-inauguration",
     "title": "Project Inauguration Ceremony",
     "body": "Grand inauguration ceremony of the Smart, Affordable, and Sustainable Agro-Tech Transformation research sub-project funded by ADB & UGC under ICSETEP.",
     "created_at": "2026-01-20T10:00:00.000Z",
     "updated_at": "2026-01-20T10:00:00.000Z"
-  },
-  {
-    "id": "cb298a54-4e21-4154-8028-bc93330d8ac5",
-    "title": "Project inception program",
-    "body": "",
-    "created_at": "2026-01-10T00:00:00+00:00"
   }
 ]
