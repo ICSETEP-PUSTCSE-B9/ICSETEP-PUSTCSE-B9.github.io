@@ -937,37 +937,60 @@ function UpdateForm({
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
+    if (!title.trim()) {
+      setError('Please enter an update title.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
-    const input: UpdateInput = { title, body };
+
+    const updateId = update?.id || `update-${Date.now()}`;
     const createdAtStr = new Date(date).toISOString();
-    await (update
-      ? supabase.from('updates').update({ ...input, created_at: createdAtStr }).eq('id', update.id)
-      : supabase.from('updates').insert({ ...input, created_at: createdAtStr }));
+    const updateObj: ProjectUpdate = {
+      id: updateId,
+      title: title.trim(),
+      body: body.trim(),
+      created_at: createdAtStr,
+      updated_at: new Date().toISOString(),
+    };
 
-    setSaving(false);
-
+    // 1. INSTANT LOCAL UPDATE: Update local storage and UI immediately
+    let updatedList: ProjectUpdate[] = [];
     try {
       let currentUpdates: ProjectUpdate[] = Array.isArray(existingUpdates) ? [...existingUpdates] : [];
-      const updateObj: ProjectUpdate = {
-        id: update?.id || `update-${Date.now()}`,
-        title,
-        body,
-        created_at: createdAtStr,
-        updated_at: new Date().toISOString(),
-      };
       if (update) {
         currentUpdates = currentUpdates.map((item) => (item.id === update.id ? updateObj : item));
       } else {
-        currentUpdates = [updateObj, ...currentUpdates.filter((item) => item.id !== updateObj.id)];
+        currentUpdates = [updateObj, ...currentUpdates.filter((item) => item.id !== updateId)];
       }
+      updatedList = currentUpdates;
       localStorage.setItem('pust_updates_cache', JSON.stringify(currentUpdates));
-
-      const token = getStoredGitHubToken();
-      if (token) await pushUpdatesToGitHub(currentUpdates, token);
     } catch {}
 
     window.dispatchEvent(new Event('pust_updates_updated'));
+
+    // 2. REMOTE DB SYNC: Push to Supabase Cloud DB
+    try {
+      const input: UpdateInput = { title: title.trim(), body: body.trim() };
+      await (update
+        ? supabase.from('updates').update({ ...input, created_at: createdAtStr }).eq('id', update.id)
+        : supabase.from('updates').insert({ id: updateId, ...input, created_at: createdAtStr }));
+    } catch (e) {
+      // ignore Supabase error
+    }
+
+    // 3. GITHUB SYNC: Push to GitHub repo
+    const token = getStoredGitHubToken();
+    if (token && updatedList.length > 0) {
+      try {
+        await pushUpdatesToGitHub(updatedList, token);
+      } catch (e) {
+        console.warn('GitHub updates push:', e);
+      }
+    }
+
+    setSaving(false);
     onSaved();
   };
 
@@ -1271,8 +1294,12 @@ function PublicationModal({
       setError('Venue / Journal is required.');
       return;
     }
+
     setSaving(true);
     setError(null);
+
+    const pubId = publication?.id || generateUUID();
+    const createdAtStr = publication?.created_at || new Date().toISOString();
 
     const input: PublicationInput = {
       title: title.trim(),
@@ -1286,35 +1313,48 @@ function PublicationModal({
       bibtex: bibtex.trim(),
     };
 
-    const pubId = publication?.id || generateUUID();
-    const createdAtStr = publication?.created_at || new Date().toISOString();
+    const pubObj: Publication = {
+      id: pubId,
+      ...input,
+      created_at: createdAtStr,
+      updated_at: new Date().toISOString(),
+    };
 
-    await (publication
-      ? supabase.from('publications').update({ ...input, updated_at: new Date().toISOString() }).eq('id', publication.id)
-      : supabase.from('publications').insert({ id: pubId, ...input, created_at: createdAtStr }));
-
-    setSaving(false);
-
+    // 1. INSTANT LOCAL UPDATE: Update local storage and UI immediately
+    let updatedList: Publication[] = [];
     try {
       let currentPubs: Publication[] = Array.isArray(existingPublications) ? [...existingPublications] : [];
-      const pubObj: Publication = {
-        id: pubId,
-        ...input,
-        created_at: createdAtStr,
-        updated_at: new Date().toISOString(),
-      };
       if (publication) {
         currentPubs = currentPubs.map((item) => (item.id === publication.id ? pubObj : item));
       } else {
         currentPubs = [pubObj, ...currentPubs.filter((item) => item.id !== pubId)];
       }
+      updatedList = currentPubs;
       localStorage.setItem('pust_publications_cache', JSON.stringify(currentPubs));
-
-      const token = getStoredGitHubToken();
-      if (token) await pushPublicationsToGitHub(currentPubs, token);
     } catch {}
 
     window.dispatchEvent(new Event('pust_publications_updated'));
+
+    // 2. REMOTE DB SYNC: Push to Supabase Cloud DB
+    try {
+      await (publication
+        ? supabase.from('publications').update({ ...input, updated_at: new Date().toISOString() }).eq('id', publication.id)
+        : supabase.from('publications').insert({ id: pubId, ...input, created_at: createdAtStr }));
+    } catch (e) {
+      // ignore Supabase error
+    }
+
+    // 3. GITHUB SYNC: Push to GitHub repo
+    const token = getStoredGitHubToken();
+    if (token && updatedList.length > 0) {
+      try {
+        await pushPublicationsToGitHub(updatedList, token);
+      } catch (e) {
+        console.warn('GitHub publications push:', e);
+      }
+    }
+
+    setSaving(false);
     onSaved();
   };
 
