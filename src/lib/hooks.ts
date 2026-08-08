@@ -185,49 +185,15 @@ const defaultUpdates: ProjectUpdate[] = [
 ];
 
 export function useUpdates() {
-  const loadUpdates = useCallback(() => {
+  // Offline fallback: read cache only (no deletedIds filtering — GitHub JSON is truth)
+  const loadUpdates = useCallback((): ProjectUpdate[] => {
     try {
       const cached = localStorage.getItem('pust_updates_cache');
-      let list: ProjectUpdate[] = cached ? JSON.parse(cached) : [];
-      const deletedStr = localStorage.getItem('pust_deleted_updates');
-      const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
-      
-      // Filter out deleted updates
-      list = list.filter((u) => {
-        if (!u || !u.id || deletedIds.has(u.id)) return false;
-        if (u.id === 'default-update-1' || u.id === 'default-update-2' || u.id === 'default-update-3') return false;
-
-        const titleLower = (u.title || '').toLowerCase();
-        const dateStr = u.created_at || '';
-
-        if (dateStr.includes('02-08') || dateStr.includes('01-10') || dateStr.includes('2026-02-08') || dateStr.includes('2026-01-10')) {
-          return false;
-        }
-        if (titleLower.includes('feb 8') || titleLower.includes('february 8') || titleLower.includes('jan 10') || titleLower.includes('january 10')) {
-          return false;
-        }
-
-        return true;
-      });
-
-      const hasContract = list.some((u) => u.id === 'default-update-contract-signing' || (u.title.includes('Contract Signing') && u.created_at.startsWith('2026-08-02')));
-      const hasInception = list.some((u) => u.id === 'default-update-inception' || (u.title.includes('Inception') && u.created_at.startsWith('2026-05-16')));
-      const hasInauguration = list.some((u) => u.id === 'default-update-inauguration' || (u.title.includes('Inauguration') && u.created_at.startsWith('2026-01-20')));
-      
-      const missingDefaults: ProjectUpdate[] = [];
-      if (!hasContract && !deletedIds.has('default-update-contract-signing')) missingDefaults.push(defaultUpdates[0]);
-      if (!hasInception && !deletedIds.has('default-update-inception')) missingDefaults.push(defaultUpdates[1]);
-      if (!hasInauguration && !deletedIds.has('default-update-inauguration')) missingDefaults.push(defaultUpdates[2]);
-
-      const combined = [...list, ...missingDefaults].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-
-      try {
-        localStorage.setItem('pust_updates_cache', JSON.stringify(combined));
-      } catch {}
-
-      return combined;
+      if (cached) {
+        const list: ProjectUpdate[] = JSON.parse(cached);
+        if (Array.isArray(list) && list.length > 0) return list;
+      }
+      return defaultUpdates;
     } catch {
       return defaultUpdates;
     }
@@ -241,6 +207,7 @@ export function useUpdates() {
     setLoading(true);
     setError(null);
     try {
+      // 1. Fetch GitHub hosted updates.json (master cross-device source)
       let ghUpdates: ProjectUpdate[] = [];
       try {
         const ghRes = await window.fetch('./updates.json?v=' + Date.now());
@@ -256,18 +223,17 @@ export function useUpdates() {
         console.warn('GitHub updates fetch:', e);
       }
 
+      // 2. Fetch Supabase (secondary source)
       const { data: resData, error: resError } = await supabase
         .from('updates')
         .select('*')
         .order('created_at', { ascending: false });
 
-      const deletedStr = localStorage.getItem('pust_deleted_updates');
-      const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
-
+      // 3. Merge remote sources — GitHub JSON is truth, no local deletedIds filtering
       let hasRemote = false;
       const map = new Map<string, ProjectUpdate>();
 
-      if (Array.isArray(ghUpdates)) {
+      if (Array.isArray(ghUpdates) && ghUpdates.length > 0) {
         hasRemote = true;
         ghUpdates.forEach((u) => {
           if (u && u.id) map.set(u.id, u);
@@ -276,31 +242,18 @@ export function useUpdates() {
       if (resData && resData.length > 0) {
         hasRemote = true;
         (resData as ProjectUpdate[]).forEach((u) => {
-          if (u && u.id) {
-            map.set(u.id, u);
-          }
+          if (u && u.id) map.set(u.id, u);
         });
       }
 
       if (hasRemote) {
-        const merged = Array.from(map.values()).filter((u) => {
-          if (!u || !u.id) return false;
-          if (u.id === 'default-update-1' || u.id === 'default-update-2' || u.id === 'default-update-3') return false;
-          const titleLower = (u.title || '').toLowerCase();
-          const dateStr = u.created_at || '';
-          if (dateStr.includes('02-08') || dateStr.includes('01-10') || dateStr.includes('2026-02-08') || dateStr.includes('2026-01-10')) {
-            return false;
-          }
-          if (titleLower.includes('feb 8') || titleLower.includes('february 8') || titleLower.includes('jan 10') || titleLower.includes('january 10')) {
-            return false;
-          }
-          return true;
-        }).sort(
+        const merged = Array.from(map.values()).sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
-
         setData(merged);
-        localStorage.setItem('pust_updates_cache', JSON.stringify(merged));
+        try {
+          localStorage.setItem('pust_updates_cache', JSON.stringify(merged));
+        } catch {}
       } else {
         setData(loadUpdates());
       }
@@ -313,7 +266,7 @@ export function useUpdates() {
     } finally {
       setLoading(false);
     }
-  }, [loadUpdates]);
+  }, [loadUpdates, data.length]);
 
   useEffect(() => {
     fetch();
@@ -374,12 +327,13 @@ const defaultPhases: ProjectPhase[] = [
 ];
 
 export function usePhases() {
+  // Offline fallback: read cache only (no length restriction — GitHub JSON is truth)
   const loadPhases = useCallback((): ProjectPhase[] => {
     try {
       const cached = localStorage.getItem('pust_phases_cache');
       if (cached) {
         const parsed: ProjectPhase[] = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length === 5) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed;
         }
       }
@@ -392,6 +346,7 @@ export function usePhases() {
   const [data, setData] = useState<ProjectPhase[]>(loadPhases);
 
   const fetchPhases = useCallback(async () => {
+    // 1. Fetch GitHub hosted phases.json (master cross-device source)
     let ghPhases: ProjectPhase[] = [];
     try {
       const ghRes = await window.fetch('./phases.json?v=' + Date.now());
@@ -407,7 +362,8 @@ export function usePhases() {
       console.warn('GitHub phases fetch:', e);
     }
 
-    if (Array.isArray(ghPhases) && ghPhases.length === 5) {
+    // Accept any valid array from GitHub (no length === 5 restriction)
+    if (Array.isArray(ghPhases) && ghPhases.length > 0) {
       setData(ghPhases);
       try {
         localStorage.setItem('pust_phases_cache', JSON.stringify(ghPhases));
@@ -415,6 +371,7 @@ export function usePhases() {
       return;
     }
 
+    // 2. Fallback: Supabase (secondary source — merge status into defaults)
     try {
       const { data: resData } = await supabase.from('phases').select('*');
       if (resData && resData.length > 0) {
@@ -438,6 +395,7 @@ export function usePhases() {
       // ignore
     }
 
+    // 3. Offline fallback
     const local = loadPhases();
     setData(local);
   }, [loadPhases]);
@@ -453,19 +411,27 @@ export function usePhases() {
     return () => window.removeEventListener('pust_phases_updated', handleUpdate);
   }, [fetchPhases, loadPhases]);
 
+  // Each phase is independently updatable — uses functional setState to get latest data
   const updatePhaseStatus = useCallback(
     async (phaseNumber: number, newStatus: PhaseStatus) => {
-      const currentList = loadPhases();
-      const updatedList = currentList.map((p) =>
-        p.number === phaseNumber ? { ...p, status: newStatus } : p
-      );
+      // Use functional setState to get the latest live state (not stale loadPhases)
+      let updatedList: ProjectPhase[] = [];
+      setData((prev) => {
+        updatedList = prev.map((p) =>
+          p.number === phaseNumber ? { ...p, status: newStatus } : p
+        );
+        return updatedList;
+      });
 
-      setData(updatedList);
+      // Wait a tick for updatedList to be assigned by the setState callback
+      await new Promise((r) => setTimeout(r, 0));
+
       try {
         localStorage.setItem('pust_phases_cache', JSON.stringify(updatedList));
       } catch {}
       window.dispatchEvent(new Event('pust_phases_updated'));
 
+      // Push the complete updated phases array to GitHub (global sync)
       try {
         const token = getStoredGitHubToken();
         if (token) {
@@ -475,6 +441,7 @@ export function usePhases() {
         console.warn('GitHub phase push:', e);
       }
 
+      // Also sync to Supabase
       try {
         await supabase.from('phases').upsert(
           {
@@ -488,6 +455,7 @@ export function usePhases() {
         console.warn('Supabase phase update error:', e);
       }
 
+      // Update project_info metric
       try {
         const activePhase = updatedList.find((p) => p.status === 'in-progress');
         if (activePhase) {
@@ -501,20 +469,22 @@ export function usePhases() {
         }
       } catch (e) {}
     },
-    [loadPhases]
+    []
   );
 
   return { data, updatePhaseStatus, refresh: fetchPhases };
 }
 
 export function usePublications() {
+  // Offline fallback: read cache only (no deletedIds filtering — GitHub JSON is truth)
   const loadPublications = useCallback((): Publication[] => {
     try {
       const cached = localStorage.getItem('pust_publications_cache');
-      let list: Publication[] = cached ? JSON.parse(cached) : [];
-      const deletedStr = localStorage.getItem('pust_deleted_publications');
-      const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
-      return list.filter((p) => !deletedIds.has(p.id));
+      if (cached) {
+        const list: Publication[] = JSON.parse(cached);
+        if (Array.isArray(list) && list.length > 0) return list;
+      }
+      return [];
     } catch {
       return [];
     }
@@ -528,6 +498,7 @@ export function usePublications() {
     setLoading(true);
     setError(null);
     try {
+      // 1. Fetch GitHub hosted publications.json (master cross-device source)
       let ghPubs: Publication[] = [];
       try {
         const ghRes = await window.fetch('./publications.json?v=' + Date.now());
@@ -543,31 +514,26 @@ export function usePublications() {
         console.warn('GitHub publications fetch:', e);
       }
 
+      // 2. Fetch Supabase (secondary source)
       const { data: resData, error: resError } = await supabase
         .from('publications')
         .select('*')
         .order('created_at', { ascending: false });
 
-      const deletedStr = localStorage.getItem('pust_deleted_publications');
-      const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
-
+      // 3. Merge remote sources — GitHub JSON is truth, no local deletedIds filtering
       let hasRemote = false;
       const map = new Map<string, Publication>();
 
-      if (Array.isArray(ghPubs)) {
+      if (Array.isArray(ghPubs) && ghPubs.length > 0) {
         hasRemote = true;
         ghPubs.forEach((p) => {
-          if (p && p.id) {
-            map.set(p.id, p);
-          }
+          if (p && p.id) map.set(p.id, p);
         });
       }
       if (resData && resData.length > 0) {
         hasRemote = true;
         (resData as Publication[]).forEach((p) => {
-          if (p && p.id) {
-            map.set(p.id, p);
-          }
+          if (p && p.id) map.set(p.id, p);
         });
       }
 
@@ -577,9 +543,10 @@ export function usePublications() {
           const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
           return timeB - timeA;
         });
-
         setData(merged);
-        localStorage.setItem('pust_publications_cache', JSON.stringify(merged));
+        try {
+          localStorage.setItem('pust_publications_cache', JSON.stringify(merged));
+        } catch {}
       } else {
         setData(loadPublications());
       }

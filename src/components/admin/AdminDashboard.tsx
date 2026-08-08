@@ -774,19 +774,12 @@ function UpdatesAdmin({
     if (!confirm(`Delete update "${u.title}"? This cannot be undone.`)) return;
     setBusyId(u.id);
 
-    try {
-      const deletedStr = localStorage.getItem('pust_deleted_updates');
-      const deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
-      if (!deletedIds.includes(u.id)) {
-        deletedIds.push(u.id);
-      }
-      localStorage.setItem('pust_deleted_updates', JSON.stringify(deletedIds));
-    } catch {}
-
+    // Delete from Supabase
     try {
       await supabase.from('updates').delete().eq('id', u.id);
     } catch {}
 
+    // Build remaining list and push to GitHub (global deletion)
     const remaining = updates.filter((item) => item.id !== u.id);
     try {
       localStorage.setItem('pust_updates_cache', JSON.stringify(remaining));
@@ -1066,19 +1059,12 @@ function PublicationsAdmin({
     if (!confirm(`Delete publication "${p.title}"? This cannot be undone.`)) return;
     setBusyId(p.id);
 
-    try {
-      const deletedStr = localStorage.getItem('pust_deleted_publications');
-      const deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
-      if (!deletedIds.includes(p.id)) {
-        deletedIds.push(p.id);
-      }
-      localStorage.setItem('pust_deleted_publications', JSON.stringify(deletedIds));
-    } catch {}
-
+    // Delete from Supabase
     try {
       await supabase.from('publications').delete().eq('id', p.id);
     } catch {}
 
+    // Build remaining list and push to GitHub (global deletion)
     const remaining = publications.filter((item) => item.id !== p.id);
     try {
       localStorage.setItem('pust_publications_cache', JSON.stringify(remaining));
