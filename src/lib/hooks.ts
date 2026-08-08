@@ -104,7 +104,7 @@ export function useNotices() {
       if (Array.isArray(githubNotices)) {
         hasRemote = true;
         githubNotices.forEach((n) => {
-          if (n && n.id && !deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+          if (n && n.id && !isSampleNotice(n) && n.is_active !== false) {
             map.set(n.id, n);
           }
         });
@@ -119,7 +119,7 @@ export function useNotices() {
         if (resData && Array.isArray(resData) && resData.length > 0) {
           hasRemote = true;
           (resData as Notice[]).forEach((n) => {
-            if (n && n.id && !deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+            if (n && n.id && !isSampleNotice(n) && n.is_active !== false) {
               map.set(n.id, n);
             }
           });
@@ -270,13 +270,13 @@ export function useUpdates() {
       if (Array.isArray(ghUpdates)) {
         hasRemote = true;
         ghUpdates.forEach((u) => {
-          if (u && u.id && !deletedIds.has(u.id)) map.set(u.id, u);
+          if (u && u.id) map.set(u.id, u);
         });
       }
       if (resData && resData.length > 0) {
         hasRemote = true;
         (resData as ProjectUpdate[]).forEach((u) => {
-          if (u && u.id && !deletedIds.has(u.id)) {
+          if (u && u.id) {
             map.set(u.id, u);
           }
         });
@@ -284,7 +284,7 @@ export function useUpdates() {
 
       if (hasRemote) {
         const merged = Array.from(map.values()).filter((u) => {
-          if (!u || !u.id || deletedIds.has(u.id)) return false;
+          if (!u || !u.id) return false;
           if (u.id === 'default-update-1' || u.id === 'default-update-2' || u.id === 'default-update-3') return false;
           const titleLower = (u.title || '').toLowerCase();
           const dateStr = u.created_at || '';
@@ -557,7 +557,7 @@ export function usePublications() {
       if (Array.isArray(ghPubs)) {
         hasRemote = true;
         ghPubs.forEach((p) => {
-          if (p && p.id && !deletedIds.has(p.id)) {
+          if (p && p.id) {
             map.set(p.id, p);
           }
         });
@@ -565,7 +565,7 @@ export function usePublications() {
       if (resData && resData.length > 0) {
         hasRemote = true;
         (resData as Publication[]).forEach((p) => {
-          if (!deletedIds.has(p.id)) {
+          if (p && p.id) {
             map.set(p.id, p);
           }
         });
