@@ -378,13 +378,29 @@ export function usePhases() {
 }
 
 export function useUpdates() {
+  const isOldDummyUpdate = (u: ProjectUpdate) => {
+    if (!u || !u.id) return true;
+    if (u.id === 'default-update-1' || u.id === 'default-update-2' || u.id === 'default-update-3') return true;
+    const titleLower = (u.title || '').toLowerCase();
+    const dateStr = u.created_at || '';
+    if (dateStr.includes('02-08') || dateStr.includes('01-10') || dateStr.includes('2026-02-08') || dateStr.includes('2026-01-10')) {
+      return true;
+    }
+    if (titleLower.includes('feb 8') || titleLower.includes('february 8') || titleLower.includes('jan 10') || titleLower.includes('january 10')) {
+      return true;
+    }
+    return false;
+  };
+
   const loadUpdates = useCallback(() => {
     try {
       const cached = localStorage.getItem('pust_updates_cache');
       const list: ProjectUpdate[] = cached ? JSON.parse(cached) : [];
       const deletedStr = localStorage.getItem('pust_deleted_updates');
       const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
-      return list.filter((u) => !deletedIds.has(u.id));
+      const filtered = list.filter((u) => !deletedIds.has(u.id) && !isOldDummyUpdate(u));
+      if (filtered.length > 0) return filtered;
+      return defaultUpdates;
     } catch {
       return defaultUpdates;
     }
@@ -399,15 +415,20 @@ export function useUpdates() {
     setError(null);
     try {
       let ghUpdates: ProjectUpdate[] = [];
+      let ghSuccess = false;
       try {
         const ghRes = await window.fetch('./updates.json?v=' + Date.now());
         if (ghRes.ok) {
           ghUpdates = await ghRes.json();
+          ghSuccess = true;
         } else {
           const rawRes = await window.fetch(
             'https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/updates.json?v=' + Date.now()
           );
-          if (rawRes.ok) ghUpdates = await rawRes.json();
+          if (rawRes.ok) {
+            ghUpdates = await rawRes.json();
+            ghSuccess = true;
+          }
         }
       } catch (e) {
         console.warn('GitHub updates fetch:', e);
@@ -419,30 +440,30 @@ export function useUpdates() {
       let hasRemote = false;
       const map = new Map<string, ProjectUpdate>();
 
-      if (Array.isArray(ghUpdates)) {
+      if (ghSuccess && Array.isArray(ghUpdates)) {
         hasRemote = true;
         ghUpdates.forEach((u) => {
-          if (u && u.id && !deletedIds.has(u.id)) {
+          if (u && u.id && !deletedIds.has(u.id) && !isOldDummyUpdate(u)) {
             map.set(u.id, u);
           }
         });
+      } else {
+        try {
+          const { data: resData } = await supabase
+            .from('updates')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (resData && Array.isArray(resData) && resData.length > 0) {
+            hasRemote = true;
+            (resData as ProjectUpdate[]).forEach((u) => {
+              if (u && u.id && !deletedIds.has(u.id) && !isOldDummyUpdate(u)) {
+                map.set(u.id, u);
+              }
+            });
+          }
+        } catch {}
       }
-
-      try {
-        const { data: resData } = await supabase
-          .from('updates')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (resData && Array.isArray(resData) && resData.length > 0) {
-          hasRemote = true;
-          (resData as ProjectUpdate[]).forEach((u) => {
-            if (u && u.id && !deletedIds.has(u.id)) {
-              map.set(u.id, u);
-            }
-          });
-        }
-      } catch {}
 
       if (hasRemote) {
         const merged = Array.from(map.values()).sort(
