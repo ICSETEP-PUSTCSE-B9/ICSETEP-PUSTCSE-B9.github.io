@@ -399,6 +399,7 @@ function NoticesAdmin({
       {(creating || editing) && (
         <NoticeForm
           notice={editing}
+          existingNotices={notices}
           onClose={() => { setCreating(false); setEditing(null); }}
           onSaved={() => { setCreating(false); setEditing(null); refresh(); onChanged(); }}
         />
@@ -409,10 +410,12 @@ function NoticesAdmin({
 
 function NoticeForm({
   notice,
+  existingNotices,
   onClose,
   onSaved,
 }: {
   notice: Notice | null;
+  existingNotices: Notice[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -524,8 +527,7 @@ function NoticeForm({
       deletedIds = deletedIds.filter((id) => id !== noticeId);
       localStorage.setItem('pust_deleted_notices', JSON.stringify(deletedIds));
 
-      const cachedStr = localStorage.getItem('pust_notices_cache');
-      let currentNotices: Notice[] = cachedStr ? JSON.parse(cachedStr) : [];
+      let currentNotices: Notice[] = Array.isArray(existingNotices) ? [...existingNotices] : [];
       if (notice) {
         currentNotices = currentNotices.map((item) => (item.id === notice.id ? noticeObj : item));
       } else {
@@ -560,7 +562,7 @@ function NoticeForm({
     }
 
     // 3. GITHUB SYNC: Push to GitHub repo if PAT token is configured
-    const githubToken = localStorage.getItem('pust_github_token');
+    const githubToken = getStoredGitHubToken();
     if (githubToken && updatedNoticesList.length > 0) {
       try {
         await pushNoticesToGitHub(updatedNoticesList, githubToken);
@@ -915,6 +917,7 @@ function UpdatesAdmin({
       {(creating || editing) && (
         <UpdateForm
           update={editing}
+          existingUpdates={updates}
           onClose={() => { setCreating(false); setEditing(null); }}
           onSaved={() => { setCreating(false); setEditing(null); refresh(); onChanged(); }}
         />
@@ -925,10 +928,12 @@ function UpdatesAdmin({
 
 function UpdateForm({
   update,
+  existingUpdates,
   onClose,
   onSaved,
 }: {
   update: ProjectUpdate | null;
+  existingUpdates: ProjectUpdate[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -950,8 +955,7 @@ function UpdateForm({
     setSaving(false);
 
     try {
-      const cachedStr = localStorage.getItem('pust_updates_cache');
-      let currentUpdates: ProjectUpdate[] = cachedStr ? JSON.parse(cachedStr) : [];
+      let currentUpdates: ProjectUpdate[] = Array.isArray(existingUpdates) ? [...existingUpdates] : [];
       const updateObj: ProjectUpdate = {
         id: update?.id || `update-${Date.now()}`,
         title,
@@ -962,7 +966,7 @@ function UpdateForm({
       if (update) {
         currentUpdates = currentUpdates.map((item) => (item.id === update.id ? updateObj : item));
       } else {
-        currentUpdates = [updateObj, ...currentUpdates];
+        currentUpdates = [updateObj, ...currentUpdates.filter((item) => item.id !== updateObj.id)];
       }
       localStorage.setItem('pust_updates_cache', JSON.stringify(currentUpdates));
 
@@ -1227,6 +1231,7 @@ function PublicationsAdmin({
       {(creating || editing) && (
         <PublicationModal
           publication={editing}
+          existingPublications={publications}
           onClose={() => {
             setCreating(false);
             setEditing(null);
@@ -1245,10 +1250,12 @@ function PublicationsAdmin({
 
 function PublicationModal({
   publication,
+  existingPublications,
   onClose,
   onSaved,
 }: {
   publication: Publication | null;
+  existingPublications: Publication[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -1303,8 +1310,7 @@ function PublicationModal({
     setSaving(false);
 
     try {
-      const cachedStr = localStorage.getItem('pust_publications_cache');
-      let currentPubs: Publication[] = cachedStr ? JSON.parse(cachedStr) : [];
+      let currentPubs: Publication[] = Array.isArray(existingPublications) ? [...existingPublications] : [];
       const pubObj: Publication = {
         id: pubId,
         ...input,
@@ -1314,7 +1320,7 @@ function PublicationModal({
       if (publication) {
         currentPubs = currentPubs.map((item) => (item.id === publication.id ? pubObj : item));
       } else {
-        currentPubs = [pubObj, ...currentPubs];
+        currentPubs = [pubObj, ...currentPubs.filter((item) => item.id !== pubId)];
       }
       localStorage.setItem('pust_publications_cache', JSON.stringify(currentPubs));
 

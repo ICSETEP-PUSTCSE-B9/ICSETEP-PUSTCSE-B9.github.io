@@ -98,42 +98,52 @@ export function useNotices() {
         console.warn('GitHub notice fetch:', e);
       }
 
-      const cached = localStorage.getItem('pust_notices_cache');
-      const localList: Notice[] = cached ? JSON.parse(cached) : [];
-
-      const deletedStr = localStorage.getItem('pust_deleted_notices');
-      const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
-
+      let hasRemote = false;
       const map = new Map<string, Notice>();
 
-      // 1. Fill map with githubNotices (the live global cloud source across all devices)
       if (Array.isArray(githubNotices)) {
+        hasRemote = true;
         githubNotices.forEach((n) => {
-          if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+          if (n && n.id && !deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
             map.set(n.id, n);
           }
         });
       }
 
-      // 2. Local notices cache (uncommitted local additions on current browser)
-      localList.forEach((n) => {
-        if (!deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
-          map.set(n.id, n);
+      try {
+        const { data: resData } = await supabase
+          .from('notices')
+          .select('*')
+          .eq('is_active', true);
+
+        if (resData && Array.isArray(resData) && resData.length > 0) {
+          hasRemote = true;
+          (resData as Notice[]).forEach((n) => {
+            if (n && n.id && !deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+              map.set(n.id, n);
+            }
+          });
         }
-      });
+      } catch {}
 
-      const merged = Array.from(map.values()).sort((a, b) => {
-        if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-
-      setData(merged);
+      if (hasRemote) {
+        const merged = Array.from(map.values()).sort((a, b) => {
+          if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+        setData(merged);
+        try {
+          localStorage.setItem('pust_notices_cache', JSON.stringify(merged));
+        } catch {}
+      } else {
+        setData(loadNotices());
+      }
     } catch (e: any) {
       if (data.length === 0) setError(e.message || 'Failed to load notices.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadNotices, data.length]);
 
   useEffect(() => {
     fetch();
@@ -251,36 +261,51 @@ export function useUpdates() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      const localList = loadUpdates();
       const deletedStr = localStorage.getItem('pust_deleted_updates');
       const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
 
+      let hasRemote = false;
       const map = new Map<string, ProjectUpdate>();
+
       if (Array.isArray(ghUpdates)) {
+        hasRemote = true;
         ghUpdates.forEach((u) => {
           if (u && u.id && !deletedIds.has(u.id)) map.set(u.id, u);
         });
       }
       if (resData && resData.length > 0) {
+        hasRemote = true;
         (resData as ProjectUpdate[]).forEach((u) => {
           if (u && u.id && !deletedIds.has(u.id)) {
             map.set(u.id, u);
           }
         });
       }
-      localList.forEach((u) => {
-        if (u && u.id && !deletedIds.has(u.id)) map.set(u.id, u);
-      });
 
-      const merged = Array.from(map.values()).sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      if (hasRemote) {
+        const merged = Array.from(map.values()).filter((u) => {
+          if (!u || !u.id || deletedIds.has(u.id)) return false;
+          if (u.id === 'default-update-1' || u.id === 'default-update-2' || u.id === 'default-update-3') return false;
+          const titleLower = (u.title || '').toLowerCase();
+          const dateStr = u.created_at || '';
+          if (dateStr.includes('02-08') || dateStr.includes('01-10') || dateStr.includes('2026-02-08') || dateStr.includes('2026-01-10')) {
+            return false;
+          }
+          if (titleLower.includes('feb 8') || titleLower.includes('february 8') || titleLower.includes('jan 10') || titleLower.includes('january 10')) {
+            return false;
+          }
+          return true;
+        }).sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
 
-      const finalData = merged;
-      setData(finalData);
-      localStorage.setItem('pust_updates_cache', JSON.stringify(finalData));
+        setData(merged);
+        localStorage.setItem('pust_updates_cache', JSON.stringify(merged));
+      } else {
+        setData(loadUpdates());
+      }
 
-      if (resError && finalData.length === 0) {
+      if (resError && data.length === 0) {
         setError(resError.message);
       }
     } catch (e: any) {
@@ -523,12 +548,14 @@ export function usePublications() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      const localList = loadPublications();
       const deletedStr = localStorage.getItem('pust_deleted_publications');
       const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
 
+      let hasRemote = false;
       const map = new Map<string, Publication>();
+
       if (Array.isArray(ghPubs)) {
+        hasRemote = true;
         ghPubs.forEach((p) => {
           if (p && p.id && !deletedIds.has(p.id)) {
             map.set(p.id, p);
@@ -536,28 +563,28 @@ export function usePublications() {
         });
       }
       if (resData && resData.length > 0) {
+        hasRemote = true;
         (resData as Publication[]).forEach((p) => {
           if (!deletedIds.has(p.id)) {
             map.set(p.id, p);
           }
         });
       }
-      localList.forEach((p) => {
-        if (!deletedIds.has(p.id)) {
-          map.set(p.id, p);
-        }
-      });
 
-      const merged = Array.from(map.values()).sort((a, b) => {
-        const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return timeB - timeA;
-      });
+      if (hasRemote) {
+        const merged = Array.from(map.values()).sort((a, b) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return timeB - timeA;
+        });
 
-      setData(merged);
-      localStorage.setItem('pust_publications_cache', JSON.stringify(merged));
+        setData(merged);
+        localStorage.setItem('pust_publications_cache', JSON.stringify(merged));
+      } else {
+        setData(loadPublications());
+      }
 
-      if (resError && merged.length === 0) {
+      if (resError && data.length === 0) {
         setError(resError.message);
       }
     } catch (e: any) {
