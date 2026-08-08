@@ -780,8 +780,16 @@ function UpdatesAdmin({
     } catch {}
 
     // Build remaining list and push to GitHub (global deletion)
-    const remaining = updates.filter((item) => item.id !== u.id);
+    let remaining: ProjectUpdate[] = [];
     try {
+      const deletedStr = localStorage.getItem('pust_deleted_updates');
+      const deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
+      if (!deletedIds.includes(u.id)) {
+        deletedIds.push(u.id);
+      }
+      localStorage.setItem('pust_deleted_updates', JSON.stringify(deletedIds));
+
+      remaining = updates.filter((item) => item.id !== u.id);
       localStorage.setItem('pust_updates_cache', JSON.stringify(remaining));
       const token = getStoredGitHubToken() || githubToken;
       if (token) {
@@ -958,6 +966,11 @@ function UpdateForm({
     // 1. INSTANT LOCAL UPDATE: Update local storage and UI immediately
     let updatedList: ProjectUpdate[] = [];
     try {
+      const deletedStr = localStorage.getItem('pust_deleted_updates');
+      let deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
+      deletedIds = deletedIds.filter((id) => id !== updateId);
+      localStorage.setItem('pust_deleted_updates', JSON.stringify(deletedIds));
+
       let currentUpdates: ProjectUpdate[] = Array.isArray(existingUpdates) ? [...existingUpdates] : [];
       if (update) {
         currentUpdates = currentUpdates.map((item) => (item.id === update.id ? updateObj : item));
@@ -1088,8 +1101,16 @@ function PublicationsAdmin({
     } catch {}
 
     // Build remaining list and push to GitHub (global deletion)
-    const remaining = publications.filter((item) => item.id !== p.id);
+    let remaining: Publication[] = [];
     try {
+      const deletedStr = localStorage.getItem('pust_deleted_publications');
+      const deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
+      if (!deletedIds.includes(p.id)) {
+        deletedIds.push(p.id);
+      }
+      localStorage.setItem('pust_deleted_publications', JSON.stringify(deletedIds));
+
+      remaining = publications.filter((item) => item.id !== p.id);
       localStorage.setItem('pust_publications_cache', JSON.stringify(remaining));
       const token = getStoredGitHubToken() || githubToken;
       if (token) {
@@ -1323,6 +1344,11 @@ function PublicationModal({
     // 1. INSTANT LOCAL UPDATE: Update local storage and UI immediately
     let updatedList: Publication[] = [];
     try {
+      const deletedStr = localStorage.getItem('pust_deleted_publications');
+      let deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : [];
+      deletedIds = deletedIds.filter((id) => id !== pubId);
+      localStorage.setItem('pust_deleted_publications', JSON.stringify(deletedIds));
+
       let currentPubs: Publication[] = Array.isArray(existingPublications) ? [...existingPublications] : [];
       if (publication) {
         currentPubs = currentPubs.map((item) => (item.id === publication.id ? pubObj : item));
