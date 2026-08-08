@@ -185,13 +185,13 @@ const defaultUpdates: ProjectUpdate[] = [
 ];
 
 export function useUpdates() {
-  // Offline fallback: read cache only (no deletedIds filtering — GitHub JSON is truth)
+  // Offline fallback: read cache only
   const loadUpdates = useCallback((): ProjectUpdate[] => {
     try {
       const cached = localStorage.getItem('pust_updates_cache');
-      if (cached) {
+      if (cached !== null) {
         const list: ProjectUpdate[] = JSON.parse(cached);
-        if (Array.isArray(list) && list.length > 0) return list;
+        if (Array.isArray(list)) return list;
       }
       return defaultUpdates;
     } catch {
@@ -209,57 +209,51 @@ export function useUpdates() {
     try {
       // 1. Fetch GitHub hosted updates.json (master cross-device source)
       let ghUpdates: ProjectUpdate[] = [];
+      let ghSuccess = false;
       try {
         const ghRes = await window.fetch('./updates.json?v=' + Date.now());
         if (ghRes.ok) {
           ghUpdates = await ghRes.json();
+          ghSuccess = true;
         } else {
           const rawRes = await window.fetch(
             'https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/updates.json?v=' + Date.now()
           );
-          if (rawRes.ok) ghUpdates = await rawRes.json();
+          if (rawRes.ok) {
+            ghUpdates = await rawRes.json();
+            ghSuccess = true;
+          }
         }
       } catch (e) {
         console.warn('GitHub updates fetch:', e);
       }
 
-      // 2. Fetch Supabase (secondary source)
-      const { data: resData, error: resError } = await supabase
-        .from('updates')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // 3. Merge remote sources — GitHub JSON is truth, no local deletedIds filtering
-      let hasRemote = false;
-      const map = new Map<string, ProjectUpdate>();
-
-      if (Array.isArray(ghUpdates) && ghUpdates.length > 0) {
-        hasRemote = true;
-        ghUpdates.forEach((u) => {
-          if (u && u.id) map.set(u.id, u);
-        });
-      }
-      if (resData && resData.length > 0) {
-        hasRemote = true;
-        (resData as ProjectUpdate[]).forEach((u) => {
-          if (u && u.id) map.set(u.id, u);
-        });
-      }
-
-      if (hasRemote) {
-        const merged = Array.from(map.values()).sort(
+      if (ghSuccess && Array.isArray(ghUpdates)) {
+        const sorted = [...ghUpdates].sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
-        setData(merged);
+        setData(sorted);
         try {
-          localStorage.setItem('pust_updates_cache', JSON.stringify(merged));
+          localStorage.setItem('pust_updates_cache', JSON.stringify(sorted));
         } catch {}
       } else {
-        setData(loadUpdates());
-      }
+        // Fallback to Supabase if GitHub fetch failed
+        try {
+          const { data: resData, error: resError } = await supabase
+            .from('updates')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-      if (resError && data.length === 0) {
-        setError(resError.message);
+          if (resData && Array.isArray(resData) && resData.length > 0) {
+            setData(resData as ProjectUpdate[]);
+            localStorage.setItem('pust_updates_cache', JSON.stringify(resData));
+          } else {
+            setData(loadUpdates());
+          }
+          if (resError && data.length === 0) setError(resError.message);
+        } catch {
+          setData(loadUpdates());
+        }
       }
     } catch (e: any) {
       if (data.length === 0) setData(defaultUpdates);
@@ -475,14 +469,15 @@ export function usePhases() {
   return { data, updatePhaseStatus, refresh: fetchPhases };
 }
 
+
 export function usePublications() {
-  // Offline fallback: read cache only (no deletedIds filtering — GitHub JSON is truth)
+  // Offline fallback: read cache only
   const loadPublications = useCallback((): Publication[] => {
     try {
       const cached = localStorage.getItem('pust_publications_cache');
-      if (cached) {
+      if (cached !== null) {
         const list: Publication[] = JSON.parse(cached);
-        if (Array.isArray(list) && list.length > 0) return list;
+        if (Array.isArray(list)) return list;
       }
       return [];
     } catch {
@@ -500,59 +495,53 @@ export function usePublications() {
     try {
       // 1. Fetch GitHub hosted publications.json (master cross-device source)
       let ghPubs: Publication[] = [];
+      let ghSuccess = false;
       try {
         const ghRes = await window.fetch('./publications.json?v=' + Date.now());
         if (ghRes.ok) {
           ghPubs = await ghRes.json();
+          ghSuccess = true;
         } else {
           const rawRes = await window.fetch(
             'https://raw.githubusercontent.com/ICSETEP-PUSTCSE-B9/ICSETEP-PUSTCSE-B9.github.io/main/public/publications.json?v=' + Date.now()
           );
-          if (rawRes.ok) ghPubs = await rawRes.json();
+          if (rawRes.ok) {
+            ghPubs = await rawRes.json();
+            ghSuccess = true;
+          }
         }
       } catch (e) {
         console.warn('GitHub publications fetch:', e);
       }
 
-      // 2. Fetch Supabase (secondary source)
-      const { data: resData, error: resError } = await supabase
-        .from('publications')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // 3. Merge remote sources — GitHub JSON is truth, no local deletedIds filtering
-      let hasRemote = false;
-      const map = new Map<string, Publication>();
-
-      if (Array.isArray(ghPubs) && ghPubs.length > 0) {
-        hasRemote = true;
-        ghPubs.forEach((p) => {
-          if (p && p.id) map.set(p.id, p);
-        });
-      }
-      if (resData && resData.length > 0) {
-        hasRemote = true;
-        (resData as Publication[]).forEach((p) => {
-          if (p && p.id) map.set(p.id, p);
-        });
-      }
-
-      if (hasRemote) {
-        const merged = Array.from(map.values()).sort((a, b) => {
+      if (ghSuccess && Array.isArray(ghPubs)) {
+        const sorted = [...ghPubs].sort((a, b) => {
           const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
           const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
           return timeB - timeA;
         });
-        setData(merged);
+        setData(sorted);
         try {
-          localStorage.setItem('pust_publications_cache', JSON.stringify(merged));
+          localStorage.setItem('pust_publications_cache', JSON.stringify(sorted));
         } catch {}
       } else {
-        setData(loadPublications());
-      }
+        // Fallback to Supabase if GitHub fetch failed
+        try {
+          const { data: resData, error: resError } = await supabase
+            .from('publications')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-      if (resError && data.length === 0) {
-        setError(resError.message);
+          if (resData && Array.isArray(resData) && resData.length > 0) {
+            setData(resData as Publication[]);
+            localStorage.setItem('pust_publications_cache', JSON.stringify(resData));
+          } else {
+            setData(loadPublications());
+          }
+          if (resError && data.length === 0) setError(resError.message);
+        } catch {
+          setData(loadPublications());
+        }
       }
     } catch (e: any) {
       if (data.length === 0) setData(loadPublications());
