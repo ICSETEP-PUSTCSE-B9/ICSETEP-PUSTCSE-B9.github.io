@@ -48,10 +48,17 @@ export function useProjectInfo() {
 
 export function useNotices() {
   const isSampleNotice = (n: Notice) => {
+    if (!n) return true;
     const title = (n.title || '').toLowerCase();
+    const attName = (n.attachment_name || '').toLowerCase();
+    const body = (n.body || '').toLowerCase();
     return (
       n.id === 'notice-1' ||
       n.id === 'notice-2' ||
+      n.id === 'notice-egp-contract-signing-aug2' ||
+      n.id === 'default-update-contract-signing' ||
+      attName.includes('highlights') ||
+      body.includes('highlights') ||
       n.id === 'a8ac4ff7-7d89-4c55-93bb-c5f04a72849f' ||
       n.id.startsWith('default-') ||
       n.id === 'welcome-notice' ||
@@ -105,17 +112,31 @@ export function useNotices() {
       let hasRemote = false;
       const map = new Map<string, Notice>();
 
-      // Preserve local notices first so newly created notices aren't lost
-      localNotices.forEach((n) => {
-        if (n && n.id && !deletedIds.has(n.id) && !isSampleNotice(n)) {
-          map.set(n.id, n);
-        }
-      });
-
       if (Array.isArray(githubNotices) && githubNotices.length > 0) {
         hasRemote = true;
         githubNotices.forEach((n) => {
           if (n && n.id && !deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
+            map.set(n.id, n);
+          }
+        });
+
+        // Preserve genuine local admin drafts (UUID format) not yet in githubNotices
+        localNotices.forEach((n) => {
+          if (
+            n &&
+            n.id &&
+            !map.has(n.id) &&
+            !deletedIds.has(n.id) &&
+            !isSampleNotice(n) &&
+            n.id.length === 36
+          ) {
+            map.set(n.id, n);
+          }
+        });
+      } else {
+        // Fallback to local notices if offline
+        localNotices.forEach((n) => {
+          if (n && n.id && !deletedIds.has(n.id) && !isSampleNotice(n)) {
             map.set(n.id, n);
           }
         });
