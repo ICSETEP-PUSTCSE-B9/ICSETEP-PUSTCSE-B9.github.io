@@ -83,22 +83,31 @@ export default function ImageSlider({ images = defaultImages }: ImageSliderProps
               className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
                 }`}
             >
+              {/* Ambient Blurred Background to fill banner margins without distortion */}
+              <img
+                src={getAssetUrl(img.src)}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full object-cover blur-2xl brightness-40 scale-110 pointer-events-none"
+              />
+
+              {/* Main Image: 100% aspect ratio preserved, no heads or documents cut off */}
               <img
                 src={getAssetUrl(img.src)}
                 alt={img.title}
-                className="h-full w-full object-cover object-center"
+                className="relative z-10 h-full w-full object-contain object-center drop-shadow-2xl"
               />
 
-              {/* Bottom Gradient Overlay for Typography (matching university banner design) */}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-6 pb-12 pt-20 sm:px-10 sm:pb-14 text-white">
+              {/* Bottom Gradient Overlay for Typography (sleek and compact) */}
+              <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/95 via-black/60 to-transparent px-6 pb-10 pt-16 sm:px-10 sm:pb-12 text-white">
                 <div className="max-w-3xl">
-                  <span className="inline-block rounded-full bg-brand-600/90 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-md mb-2">
+                  <span className="inline-block rounded-full bg-brand-600/90 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md mb-1.5">
                     Featured Events & Showcase
                   </span>
-                  <h3 className="font-display text-2xl font-extrabold text-white drop-shadow-md sm:text-3xl lg:text-4xl">
+                  <h3 className="font-display text-xl font-extrabold text-white drop-shadow-md sm:text-2xl lg:text-3xl">
                     {img.title}
                   </h3>
-                  <p className="mt-2 text-sm font-medium text-white/80 sm:text-base">
+                  <p className="mt-1 text-xs font-medium text-white/90 sm:text-sm max-w-2xl">
                     {img.subtitle}
                   </p>
                 </div>
