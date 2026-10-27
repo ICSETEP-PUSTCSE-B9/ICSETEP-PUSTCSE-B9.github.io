@@ -28,6 +28,12 @@ const defaultImages: ProjectSlide[] = [
     title: 'First eGP Contract signing Ceremony at ICSETEP project',
     subtitle: 'Dept. of Computer Science and Engineering, Pabna University of Science and Technology',
   },
+  {
+    id: 'contract-2',
+    src: 'team/Contract2.jpeg',
+    title: 'Contract Signing Ceremony',
+    subtitle: 'Research Laboratory Procurement under ICSETEP RDG B9 | Dept. of CSE, PUST',
+  },
 ];
 
 interface ImageSliderProps {
