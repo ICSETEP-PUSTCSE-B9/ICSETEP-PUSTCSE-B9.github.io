@@ -1,6 +1,6 @@
 [
   {
-    "id": "e805593f-22d2-45b7-974b-4a64c332ace0",
+    "id": "78280f1e-f3b1-4cd2-824a-7bc9242d991b",
     "title": "Public Reporting on Contract Signing",
     "body": "Invitation or Proposal Ref. No: ICSETEP/ B-9/ PROCUREMENT /APP/GD2-3-5-8.\n\n[ATTACHMENTS:[{\"url\":\"./uploads/Report Contract Signing (Schedule 10).pdf\",\"name\":\"Report Contract Signing (Schedule 10).pdf\",\"type\":\"pdf\"},{\"url\":\"./uploads/Reporting Contract Award (Schedule-9).pdf\",\"name\":\"Reporting Contract Award (Schedule-9).pdf\",\"type\":\"pdf\"}]]",
     "priority": "high",
@@ -23,5 +23,25 @@
     ],
     "created_at": "2026-10-27T14:45:00.000Z",
     "updated_at": "2026-10-27T15:20:00.000Z"
+  },
+  {
+    "id": "e805593f-22d2-45b7-974b-4a64c332ace0",
+    "title": "Public Reporting on Contract Signing",
+    "body": "EGP Tender ID: 1285502\n\n[ATTACHMENT:{\"url\":\"./uploads/Public_Reporting_on_contract_signing_F10.pdf\",\"name\":\"Public Reporting on contract signing (F10,Rules 49(2)).pdf\",\"type\":\"pdf\"}]",
+    "priority": "normal",
+    "is_pinned": false,
+    "is_active": true,
+    "attachment_url": "./uploads/Public_Reporting_on_contract_signing_F10.pdf",
+    "attachment_name": "Public Reporting on contract signing (F10,Rules 49(2)).pdf",
+    "attachment_type": "pdf",
+    "attachments": [
+      {
+        "url": "./uploads/Public_Reporting_on_contract_signing_F10.pdf",
+        "name": "Public Reporting on contract signing (F10,Rules 49(2)).pdf",
+        "type": "pdf"
+      }
+    ],
+    "created_at": "2026-08-05T10:32:13.856Z",
+    "updated_at": "2026-08-05T10:32:13.856Z"
   }
 ]
