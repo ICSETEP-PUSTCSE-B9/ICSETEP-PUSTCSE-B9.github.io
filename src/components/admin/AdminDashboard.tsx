@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNotices, useUpdates, usePhases, usePublications } from '@/lib/hooks';
-import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority, AttachmentType, Publication, PublicationInput, PublicationType } from '@/lib/types';
+import type { Notice, ProjectUpdate, NoticeInput, UpdateInput, Priority, AttachmentType, NoticeAttachment, Publication, PublicationInput, PublicationType, PhaseStatus } from '@/lib/types';
 import { priorityStyles, formatDate, detectAttachmentType, attachmentMeta, parseNoticeAttachment, pushNoticesToGitHub, pushUpdatesToGitHub, pushPublicationsToGitHub, pushPhasesToGitHub, uploadFileToGitHub, uploadFileToSupabaseStorage, generateUUID, getStoredGitHubToken } from '@/lib/utils';
 import { X, Megaphone, History, Layers, Plus, Pencil, Trash2, Pin, PinOff, Loader2, Save, Paperclip, Upload, FileText, FileSpreadsheet, Image as ImageIcon, File, Globe, Key, BookOpen } from 'lucide-react';
 
@@ -324,7 +324,7 @@ function NoticesAdmin({
       <div className="space-y-3">
         {notices.map((n) => {
           const ps = priorityStyles[n.priority] ?? priorityStyles.normal;
-          const { cleanBody, attachmentUrl, attachmentName } = parseNoticeAttachment(n);
+          const { cleanBody, attachmentUrl, attachmentName, attachments } = parseNoticeAttachment(n);
           return (
             <div
               key={n.id}
@@ -349,7 +349,7 @@ function NoticesAdmin({
                     )}
                     {attachmentUrl && (
                       <span className="flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-200">
-                        <Paperclip className="h-3 w-3" /> {attachmentName || 'Attachment'}
+                        <Paperclip className="h-3 w-3" /> {attachments.length > 1 ? `${attachments.length} Files` : (attachmentName || 'Attachment')}
                       </span>
                     )}
                   </div>
@@ -425,68 +425,124 @@ function NoticeForm({
   const [priority, setPriority] = useState<Priority>(notice?.priority ?? 'normal');
   const [isPinned, setIsPinned] = useState(notice?.is_pinned ?? false);
   const [isActive, setIsActive] = useState(notice?.is_active ?? true);
-  const [attachmentUrl, setAttachmentUrl] = useState(initialParsed?.attachmentUrl ?? notice?.attachment_url ?? '');
-  const [attachmentName, setAttachmentName] = useState(initialParsed?.attachmentName ?? notice?.attachment_name ?? '');
-  const [attachmentType, setAttachmentType] = useState<AttachmentType>(initialParsed?.attachmentType ?? notice?.attachment_type ?? 'other');
+  const [attachments, setAttachments] = useState<NoticeAttachment[]>(() => {
+    if (initialParsed?.attachments && initialParsed.attachments.length > 0) {
+      return initialParsed.attachments;
+    }
+    if (notice?.attachments && notice.attachments.length > 0) {
+      return notice.attachments;
+    }
+    if (initialParsed?.attachmentUrl) {
+      return [{
+        url: initialParsed.attachmentUrl,
+        name: initialParsed.attachmentName || 'Attachment',
+        type: initialParsed.attachmentType || 'other',
+      }];
+    }
+    if (notice?.attachment_url) {
+      return [{
+        url: notice.attachment_url,
+        name: notice.attachment_name || 'Attachment',
+        type: notice.attachment_type || 'other',
+      }];
+    }
+    return [];
+  });
+  const [urlInput, setUrlInput] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setError(null);
     setUploading(true);
-    const fileName = file.name;
-    const detected = detectAttachmentType(fileName, file.type);
 
-    // 1. Primary: Upload file directly to Supabase Storage
-    const supaRes = await uploadFileToSupabaseStorage(file);
-    if (supaRes.success && supaRes.url) {
-      setAttachmentUrl(supaRes.url);
-      setAttachmentName(fileName);
-      setAttachmentType(detected);
-      setUploading(false);
-      return;
-    }
+    const fileList = Array.from(files);
+    const addedList: NoticeAttachment[] = [];
 
-    // 2. Fallback: Upload to GitHub repo if PAT token is configured
-    const token = localStorage.getItem('pust_github_token');
-    if (token) {
-      const uploadRes = await uploadFileToGitHub(file, token);
-      if (uploadRes.success && uploadRes.url) {
-        setAttachmentUrl(uploadRes.url);
-        setAttachmentName(fileName);
-        setAttachmentType(detected);
-        setUploading(false);
-        return;
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const fileName = file.name;
+      const detected = detectAttachmentType(fileName, file.type);
+      if (fileList.length > 1) {
+        setUploadProgress(`Uploading (${i + 1}/${fileList.length}): ${fileName}...`);
+      } else {
+        setUploadProgress(`Uploading ${fileName}...`);
+      }
+
+      // 1. Primary: Upload file directly to Supabase Storage
+      const supaRes = await uploadFileToSupabaseStorage(file);
+      if (supaRes.success && supaRes.url) {
+        addedList.push({
+          url: supaRes.url,
+          name: fileName,
+          type: detected,
+        });
+        continue;
+      }
+
+      // 2. Fallback: Upload to GitHub repo if PAT token is configured
+      const token = localStorage.getItem('pust_github_token');
+      if (token) {
+        const uploadRes = await uploadFileToGitHub(file, token);
+        if (uploadRes.success && uploadRes.url) {
+          addedList.push({
+            url: uploadRes.url,
+            name: fileName,
+            type: detected,
+          });
+          continue;
+        }
+      }
+
+      // 3. Fallback: Base64 Data URL for local testing
+      if (file.size > 2.5 * 1024 * 1024) {
+        setError('Notice: Large file (>2.5MB). Create a public "notices" bucket in Supabase Storage or enter GitHub PAT for direct cloud hosting.');
+      }
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (event) => resolve(event.target?.result as string);
+          reader.onerror = () => reject(new Error('Failed to read selected file.'));
+          reader.readAsDataURL(file);
+        });
+        addedList.push({
+          url: base64,
+          name: fileName,
+          type: detected,
+        });
+      } catch {
+        setError(`Failed to read selected file: ${fileName}`);
       }
     }
 
-    // 3. Fallback: Base64 Data URL for local testing
-    if (file.size > 2.5 * 1024 * 1024) {
-      setError('Notice: Large file (>2.5MB). Create a public "notices" bucket in Supabase Storage or enter GitHub PAT for direct cloud hosting.');
-    }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setAttachmentUrl(result);
-      setAttachmentName(fileName);
-      setAttachmentType(detected);
-      setUploading(false);
-    };
-    reader.onerror = () => {
-      setError('Failed to read selected file.');
-      setUploading(false);
-    };
-    reader.readAsDataURL(file);
+    setAttachments((prev) => [...prev, ...addedList]);
+    setUploading(false);
+    setUploadProgress('');
+    e.target.value = '';
   };
 
-  const handleRemoveAttachment = () => {
-    setAttachmentUrl('');
-    setAttachmentName('');
-    setAttachmentType('other');
+  const handleAddUrl = () => {
+    const cleanUrl = urlInput.trim();
+    if (!cleanUrl) return;
+    const filename = cleanUrl.split('/').pop()?.split('?')[0] || 'File Attachment';
+    setAttachments((prev) => [
+      ...prev,
+      {
+        url: cleanUrl,
+        name: filename,
+        type: detectAttachmentType(filename),
+      },
+    ]);
+    setUrlInput('');
+  };
+
+  const handleRemoveAttachment = (idxToRemove: number) => {
+    setAttachments((prev) => prev.filter((_, idx) => idx !== idxToRemove));
   };
 
   const save = async () => {
@@ -499,11 +555,18 @@ function NoticeForm({
     setError(null);
 
     const noticeId = (notice?.id && notice.id.length === 36) ? notice.id : generateUUID();
-    let finalBody = body.replace(/\n\n\[ATTACHMENT:.*\]$/s, '').trim();
-    if (attachmentUrl) {
-      const attObj = { url: attachmentUrl, name: attachmentName || 'Attachment', type: attachmentType || 'other' };
-      finalBody = `${finalBody}\n\n[ATTACHMENT:${JSON.stringify(attObj)}]`;
+    let finalBody = body
+      .replace(/[\s\n]*\[ATTACHMENTS:[\s\S]*?\]/g, '')
+      .replace(/[\s\n]*\[ATTACHMENT:[\s\S]*?\]/g, '')
+      .trim();
+
+    if (attachments.length === 1) {
+      finalBody = `${finalBody}\n\n[ATTACHMENT:${JSON.stringify(attachments[0])}]`;
+    } else if (attachments.length > 1) {
+      finalBody = `${finalBody}\n\n[ATTACHMENTS:${JSON.stringify(attachments)}]`;
     }
+
+    const primaryAtt = attachments[0];
 
     const noticeObj: Notice = {
       id: noticeId,
@@ -512,9 +575,10 @@ function NoticeForm({
       priority,
       is_pinned: isPinned,
       is_active: isActive,
-      attachment_url: attachmentUrl || undefined,
-      attachment_name: attachmentName || undefined,
-      attachment_type: attachmentType || undefined,
+      attachment_url: primaryAtt?.url || undefined,
+      attachment_name: primaryAtt?.name || undefined,
+      attachment_type: primaryAtt?.type || undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
       created_at: notice?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -543,13 +607,13 @@ function NoticeForm({
     const fullInput: any = {
       id: noticeId,
       title,
-      body,
+      body: finalBody,
       priority,
       is_pinned: isPinned,
       is_active: isActive,
-      attachment_url: attachmentUrl || null,
-      attachment_name: attachmentName || null,
-      attachment_type: attachmentType || null,
+      attachment_url: primaryAtt?.url || null,
+      attachment_name: primaryAtt?.name || null,
+      attachment_type: primaryAtt?.type || null,
       created_at: notice?.created_at || new Date().toISOString(),
     };
 
@@ -572,8 +636,6 @@ function NoticeForm({
     setSaving(false);
     onSaved();
   };
-
-  const meta = attachmentMeta[attachmentType] || attachmentMeta.other;
 
   return (
     <div
@@ -614,83 +676,120 @@ function NoticeForm({
             <div className="mb-2 flex items-center justify-between">
               <label className="flex items-center gap-1.5 text-sm font-semibold text-ink-800">
                 <Paperclip className="h-4 w-4 text-brand-600" />
-                Attachment (PDF, Word, Excel, Image)
+                Attachments ({attachments.length})
               </label>
-              {attachmentUrl && (
+              {attachments.length > 0 && (
                 <button
                   type="button"
-                  onClick={handleRemoveAttachment}
-                  className="text-xs font-semibold text-red-600 hover:text-red-700"
+                  onClick={() => setAttachments([])}
+                  className="text-xs font-semibold text-red-600 hover:text-red-700 cursor-pointer"
                 >
-                  Remove File
+                  Remove All
                 </button>
               )}
             </div>
 
-            {attachmentUrl ? (
-              <div className="flex items-center gap-3 rounded-lg border border-ink-200 bg-white p-3">
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${meta.iconBg}`}>
-                  {attachmentType === 'pdf' || attachmentType === 'word' ? (
-                    <FileText className="h-4 w-4" />
-                  ) : attachmentType === 'excel' ? (
-                    <FileSpreadsheet className="h-4 w-4" />
-                  ) : attachmentType === 'image' ? (
-                    <ImageIcon className="h-4 w-4" />
-                  ) : (
-                    <File className="h-4 w-4" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold text-ink-900">{attachmentName || 'Attached File'}</p>
-                  <span className={`inline-block mt-0.5 rounded px-1.5 py-0.2 text-[9px] font-bold uppercase ${meta.badge}`}>
-                    {meta.label}
-                  </span>
-                </div>
-                {attachmentType === 'image' && (
-                  <img src={attachmentUrl} alt="preview" className="h-10 w-10 shrink-0 rounded object-cover border" />
-                )}
+            {/* List of current attachments */}
+            {attachments.length > 0 && (
+              <div className="mb-3 space-y-2">
+                {attachments.map((att, idx) => {
+                  const meta = attachmentMeta[att.type || 'other'] || attachmentMeta.other;
+                  return (
+                    <div
+                      key={`${att.url}-${idx}`}
+                      className="flex items-center gap-2.5 rounded-lg border border-ink-200 bg-white p-2.5 shadow-xs"
+                    >
+                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${meta.iconBg}`}>
+                        {att.type === 'pdf' || att.type === 'word' ? (
+                          <FileText className="h-4 w-4" />
+                        ) : att.type === 'excel' ? (
+                          <FileSpreadsheet className="h-4 w-4" />
+                        ) : att.type === 'image' ? (
+                          <ImageIcon className="h-4 w-4" />
+                        ) : (
+                          <File className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-ink-900" title={att.name}>
+                          {att.name || 'Attached File'}
+                        </p>
+                        <span className={`inline-block mt-0.5 rounded px-1.5 py-0.2 text-[9px] font-bold uppercase ${meta.badge}`}>
+                          {meta.label}
+                        </span>
+                      </div>
+                      {att.type === 'image' && (
+                        <img src={att.url} alt="preview" className="h-8 w-8 shrink-0 rounded object-cover border" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAttachment(idx)}
+                        className="rounded p-1 text-ink-400 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                        title="Remove file"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-            ) : (
-              <div className="space-y-3">
-                <label className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-ink-300 bg-white p-4 text-center cursor-pointer hover:border-brand-500 hover:bg-brand-50/30 transition-colors">
-                  <Upload className="h-6 w-6 text-brand-600 mb-1" />
-                  <span className="text-xs font-semibold text-ink-800">
-                    {uploading ? 'Reading file...' : 'Click to Upload PDF, Word, Excel, or Image'}
-                  </span>
-                  <span className="text-[11px] text-ink-400 mt-0.5">
-                    Supports .pdf, .doc, .docx, .xls, .xlsx, .csv, .png, .jpg, .webp
-                  </span>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.webp"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                </label>
+            )}
 
-                <div className="relative flex items-center justify-center">
-                  <div className="w-full border-t border-ink-200"></div>
-                  <span className="absolute bg-ink-50/50 px-2 text-[10px] uppercase font-bold text-ink-400">or enter file URL</span>
-                </div>
+            {/* Upload & Add URL area */}
+            <div className="space-y-3">
+              <label className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-ink-300 bg-white p-3.5 text-center cursor-pointer hover:border-brand-500 hover:bg-brand-50/30 transition-colors">
+                <Upload className="h-5 w-5 text-brand-600 mb-1" />
+                <span className="text-xs font-semibold text-ink-800">
+                  {uploading
+                    ? (uploadProgress || 'Reading files...')
+                    : (attachments.length > 0
+                        ? '+ Click to Upload More Files (PDF, Word, Excel, Image)'
+                        : 'Click to Upload PDF, Word, Excel, or Image')}
+                </span>
+                <span className="text-[11px] text-ink-400 mt-0.5">
+                  Supports .pdf, .doc, .docx, .xls, .xlsx, .csv, .png, .jpg, .webp (select one or multiple)
+                </span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.webp"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+              </label>
 
+              <div className="relative flex items-center justify-center">
+                <div className="w-full border-t border-ink-200"></div>
+                <span className="absolute bg-ink-50/50 px-2 text-[10px] uppercase font-bold text-ink-400">
+                  or enter file URL
+                </span>
+              </div>
+
+              <div className="flex gap-2">
                 <input
                   type="url"
                   placeholder="https://example.com/document.pdf"
-                  value={attachmentUrl}
-                  onChange={(e) => {
-                    const url = e.target.value;
-                    setAttachmentUrl(url);
-                    if (url) {
-                      const filename = url.split('/').pop() || 'File Attachment';
-                      setAttachmentName(filename);
-                      setAttachmentType(detectAttachmentType(filename));
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddUrl();
                     }
                   }}
                   className={inputCls}
                 />
+                <button
+                  type="button"
+                  onClick={handleAddUrl}
+                  disabled={!urlInput.trim()}
+                  className="shrink-0 rounded-lg bg-ink-100 px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-ink-200 disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  Add URL
+                </button>
               </div>
-            )}
+            </div>
           </div>
 
           <div className="flex gap-4 pt-1">

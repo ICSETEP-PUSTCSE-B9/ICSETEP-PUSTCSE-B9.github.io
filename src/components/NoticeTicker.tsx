@@ -83,7 +83,7 @@ export default function NoticeTicker({ notices }: Props) {
         <div className="ticker-track flex w-max min-w-full items-center gap-8 whitespace-nowrap pl-4">
           {items.map((n, i) => {
             const ps = priorityStyles[n.priority] ?? priorityStyles.normal;
-            const { cleanBody, attachmentUrl, attachmentName } = parseNoticeAttachment(n);
+            const { cleanBody, attachmentUrl, attachmentName, attachments } = parseNoticeAttachment(n);
 
             return (
               <a
@@ -103,7 +103,7 @@ export default function NoticeTicker({ notices }: Props) {
                 {attachmentUrl && (
                   <span className="flex items-center gap-1 rounded bg-brand-600/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     <Paperclip className="h-3 w-3" />
-                    {attachmentName || 'Attachment'}
+                    {attachments.length > 1 ? `${attachments.length} Attachments` : (attachmentName || 'Attachment')}
                   </span>
                 )}
                 <span className="text-white/30 ml-4">•</span>

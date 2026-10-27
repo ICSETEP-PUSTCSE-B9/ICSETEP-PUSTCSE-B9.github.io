@@ -1,4 +1,4 @@
-import type { Priority } from './types';
+import type { Priority, AttachmentType, NoticeAttachment } from './types';
 import { supabase } from './supabase';
 
 export function generateUUID(): string {
@@ -125,47 +125,125 @@ export function parseNoticeAttachment(notice: {
   body?: string;
   attachment_url?: string;
   attachment_name?: string;
-  attachment_type?: 'pdf' | 'word' | 'excel' | 'image' | 'other';
+  attachment_type?: AttachmentType;
+  attachments?: NoticeAttachment[];
 }): {
   cleanBody: string;
   attachmentUrl?: string;
   attachmentName?: string;
-  attachmentType: 'pdf' | 'word' | 'excel' | 'image' | 'other';
+  attachmentType: AttachmentType;
+  attachments: NoticeAttachment[];
 } {
   let cleanBody = notice.body || '';
-  let attachmentUrl = notice.attachment_url;
-  let attachmentName = notice.attachment_name;
-  let attachmentType = notice.attachment_type;
+  const list: NoticeAttachment[] = [];
 
-  // Match [ATTACHMENT:{...}] anywhere at the end of body with optional leading newlines/spaces
-  const match = cleanBody.match(/[\s\n]*\[ATTACHMENT:([\s\S]*)\]$/);
-  if (match) {
-    try {
-      const parsed = JSON.parse(match[1]);
-      attachmentUrl = attachmentUrl || parsed.url;
-      attachmentName = attachmentName || parsed.name;
-      attachmentType = attachmentType || parsed.type;
-    } catch (e) {
-      // ignore
+  // 1. If notice.attachments is already provided and is an array
+  if (Array.isArray(notice.attachments) && notice.attachments.length > 0) {
+    for (const a of notice.attachments) {
+      if (a && a.url) {
+        list.push({
+          url: a.url,
+          name: a.name || a.url.split('/').pop() || 'Attachment',
+          type: a.type || detectAttachmentType(a.name || a.url),
+        });
+      }
     }
   }
 
-  // Strip all raw [ATTACHMENT:...] tags from cleanBody so base64 strings never leak into text rendering!
-  cleanBody = cleanBody.replace(/[\s\n]*\[ATTACHMENT:[\s\S]*?\]/g, '').trim();
-
-  let finalType = attachmentType;
-  if (!finalType && attachmentName) {
-    finalType = detectAttachmentType(attachmentName);
+  // 2. Match [ATTACHMENTS:[...]] in cleanBody
+  const multiMatches = cleanBody.match(/\[ATTACHMENTS:([\s\S]*?)\]/g);
+  if (multiMatches) {
+    for (const m of multiMatches) {
+      const jsonStr = m.replace(/^\[ATTACHMENTS:/, '').replace(/\]$/, '');
+      try {
+        const parsed = JSON.parse(jsonStr);
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (item && item.url) {
+              list.push({
+                url: item.url,
+                name: item.name || item.url.split('/').pop() || 'Attachment',
+                type: item.type || detectAttachmentType(item.name || item.url),
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
   }
-  if (!finalType && attachmentUrl) {
-    finalType = detectAttachmentType(attachmentUrl);
+
+  // 3. Match [ATTACHMENT:{...}] in cleanBody
+  const singleMatches = cleanBody.match(/\[ATTACHMENT:([\s\S]*?)\]/g);
+  if (singleMatches) {
+    for (const m of singleMatches) {
+      const jsonStr = m.replace(/^\[ATTACHMENT:/, '').replace(/\]$/, '');
+      try {
+        const parsed = JSON.parse(jsonStr);
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (item && item.url) {
+              list.push({
+                url: item.url,
+                name: item.name || item.url.split('/').pop() || 'Attachment',
+                type: item.type || detectAttachmentType(item.name || item.url),
+              });
+            }
+          }
+        } else if (parsed && parsed.url) {
+          list.push({
+            url: parsed.url,
+            name: parsed.name || parsed.url.split('/').pop() || 'Attachment',
+            type: parsed.type || detectAttachmentType(parsed.name || parsed.url),
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  // 4. Fallback to notice.attachment_url if nothing in list
+  if (list.length === 0 && notice.attachment_url) {
+    list.push({
+      url: notice.attachment_url,
+      name: notice.attachment_name || notice.attachment_url.split('/').pop() || 'Attachment',
+      type: notice.attachment_type || detectAttachmentType(notice.attachment_name || notice.attachment_url),
+    });
+  }
+
+  // Strip all [ATTACHMENTS:...] and [ATTACHMENT:...] tags from cleanBody
+  cleanBody = cleanBody
+    .replace(/[\s\n]*\[ATTACHMENTS:[\s\S]*?\]/g, '')
+    .replace(/[\s\n]*\[ATTACHMENT:[\s\S]*?\]/g, '')
+    .trim();
+
+  // Deduplicate by URL
+  const seen = new Set<string>();
+  const uniqueList: NoticeAttachment[] = [];
+  for (const item of list) {
+    if (item.url && !seen.has(item.url)) {
+      seen.add(item.url);
+      uniqueList.push(item);
+    }
+  }
+
+  const primary = uniqueList[0];
+  let finalType = primary?.type;
+  if (!finalType && primary?.name) {
+    finalType = detectAttachmentType(primary.name);
+  }
+  if (!finalType && primary?.url) {
+    finalType = detectAttachmentType(primary.url);
   }
 
   return {
     cleanBody,
-    attachmentUrl: attachmentUrl || undefined,
-    attachmentName: attachmentName || undefined,
+    attachmentUrl: primary?.url,
+    attachmentName: primary?.name,
     attachmentType: finalType || 'other',
+    attachments: uniqueList,
   };
 }
 

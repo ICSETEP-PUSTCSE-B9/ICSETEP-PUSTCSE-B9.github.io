@@ -20,6 +20,12 @@ export interface ProjectInfo {
 
 export type AttachmentType = 'pdf' | 'word' | 'excel' | 'image' | 'other';
 
+export interface NoticeAttachment {
+  url: string;
+  name?: string;
+  type?: AttachmentType;
+}
+
 export interface Notice {
   id: string;
   title: string;
@@ -30,6 +36,7 @@ export interface Notice {
   attachment_url?: string;
   attachment_name?: string;
   attachment_type?: AttachmentType;
+  attachments?: NoticeAttachment[];
   created_at: string;
   updated_at: string;
 }
@@ -67,6 +74,7 @@ export interface NoticeInput {
   attachment_url?: string;
   attachment_name?: string;
   attachment_type?: AttachmentType;
+  attachments?: NoticeAttachment[];
 }
 
 export interface UpdateInput {
