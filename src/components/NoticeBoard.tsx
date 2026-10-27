@@ -128,14 +128,27 @@ export default function NoticeBoard({ notices }: Props) {
                                     </span>
                                   </div>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownload(att.url, att.name)}
-                                  className="flex w-full sm:w-auto shrink-0 items-center justify-center gap-1.5 rounded-xl bg-brand-600 sm:bg-white text-white sm:text-ink-700 px-4 py-2 sm:py-2 text-xs font-bold shadow-sm ring-1 ring-inset ring-brand-600 sm:ring-ink-200 hover:bg-brand-700 sm:hover:bg-brand-50 sm:hover:text-brand-700 transition-all cursor-pointer"
-                                >
-                                  <Download className="h-3.5 w-3.5" />
-                                  <span>Download Attachment</span>
-                                </button>
+                                <div className="flex w-full sm:w-auto shrink-0 items-center gap-2">
+                                  <a
+                                    href={att.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-white text-ink-700 px-3 py-2 text-xs font-bold shadow-xs ring-1 ring-inset ring-ink-200 hover:bg-ink-50 hover:text-brand-700 transition-all cursor-pointer"
+                                    title="Open file in new tab"
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    <span>View</span>
+                                  </a>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDownload(att.url, att.name)}
+                                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-brand-600 text-white px-3.5 py-2 text-xs font-bold shadow-xs hover:bg-brand-700 transition-all cursor-pointer"
+                                    title="Download file"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                    <span>Download</span>
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>

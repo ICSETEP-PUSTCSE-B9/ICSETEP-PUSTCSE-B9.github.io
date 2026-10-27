@@ -98,13 +98,24 @@ export function useNotices() {
         console.warn('GitHub notice fetch:', e);
       }
 
+      const localNotices = loadNotices();
+      const deletedStr = localStorage.getItem('pust_deleted_notices');
+      const deletedIds = new Set<string>(deletedStr ? JSON.parse(deletedStr) : []);
+
       let hasRemote = false;
       const map = new Map<string, Notice>();
 
-      if (Array.isArray(githubNotices)) {
+      // Preserve local notices first so newly created notices aren't lost
+      localNotices.forEach((n) => {
+        if (n && n.id && !deletedIds.has(n.id) && !isSampleNotice(n)) {
+          map.set(n.id, n);
+        }
+      });
+
+      if (Array.isArray(githubNotices) && githubNotices.length > 0) {
         hasRemote = true;
         githubNotices.forEach((n) => {
-          if (n && n.id && !isSampleNotice(n) && n.is_active !== false) {
+          if (n && n.id && !deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
             map.set(n.id, n);
           }
         });
@@ -119,14 +130,14 @@ export function useNotices() {
         if (resData && Array.isArray(resData) && resData.length > 0) {
           hasRemote = true;
           (resData as Notice[]).forEach((n) => {
-            if (n && n.id && !isSampleNotice(n) && n.is_active !== false) {
+            if (n && n.id && !deletedIds.has(n.id) && !isSampleNotice(n) && n.is_active !== false) {
               map.set(n.id, n);
             }
           });
         }
       } catch {}
 
-      if (hasRemote) {
+      if (hasRemote || map.size > 0) {
         const merged = Array.from(map.values()).sort((a, b) => {
           if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -161,6 +172,13 @@ export function useNotices() {
 }
 
 const defaultUpdates: ProjectUpdate[] = [
+  {
+    id: 'update-public-reporting-contract-signing',
+    title: 'Public Reporting on Contract Signing',
+    body: 'Invitation or Proposal Ref. No: ICSETEP/ B-9/ PROCUREMENT /APP/GD2-3-5-8.',
+    created_at: '2026-10-27T14:45:00.000Z',
+    updated_at: '2026-10-27T15:20:00.000Z',
+  },
   {
     id: 'default-update-contract-signing',
     title: 'First eGP Contract Signing Ceremony',

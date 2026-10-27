@@ -20,10 +20,11 @@ export default function AdminDashboard({ onSignOut, onClose, onChanged }: Props)
   const { data: publications, refresh: refreshPublications } = usePublications();
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && !localStorage.getItem('pust_github_token')) {
-      const p1 = 'ghp_l9lsbPKmX679EfiN';
-      const p2 = 'I76ix16M0uTi951gFGyU';
-      localStorage.setItem('pust_github_token', p1 + p2);
+    if (typeof window !== 'undefined') {
+      const oldToken = localStorage.getItem('pust_github_token');
+      if (oldToken && oldToken.includes('l9lsbPKmX679EfiN')) {
+        localStorage.removeItem('pust_github_token');
+      }
     }
   }, []);
 
