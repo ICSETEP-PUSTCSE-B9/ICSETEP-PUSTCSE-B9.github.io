@@ -151,12 +151,12 @@ export function parseNoticeAttachment(notice: {
   }
 
   // 2. Match [ATTACHMENTS:[...]] in cleanBody
-  const multiMatches = cleanBody.match(/\[ATTACHMENTS:([\s\S]*?)\]/g);
+  const multiMatches = cleanBody.match(/\[ATTACHMENTS:[\s\S]*?\]\s*\]/g) || cleanBody.match(/\[ATTACHMENTS:[\s\S]*?\]/g);
   if (multiMatches) {
     for (const m of multiMatches) {
-      const jsonStr = m.replace(/^\[ATTACHMENTS:/, '').replace(/\]$/, '');
+      const jsonStr = m.replace(/^\[ATTACHMENTS:\s*/, '').replace(/\]\s*$/, '').replace(/\]\s*$/, '');
       try {
-        const parsed = JSON.parse(jsonStr);
+        const parsed = JSON.parse(jsonStr.endsWith(']') ? jsonStr : jsonStr + ']');
         if (Array.isArray(parsed)) {
           for (const item of parsed) {
             if (item && item.url) {
@@ -175,10 +175,10 @@ export function parseNoticeAttachment(notice: {
   }
 
   // 3. Match [ATTACHMENT:{...}] in cleanBody
-  const singleMatches = cleanBody.match(/\[ATTACHMENT:([\s\S]*?)\]/g);
+  const singleMatches = cleanBody.match(/\[ATTACHMENT:[\s\S]*?\}\s*\]/g) || cleanBody.match(/\[ATTACHMENT:[\s\S]*?\]/g);
   if (singleMatches) {
     for (const m of singleMatches) {
-      const jsonStr = m.replace(/^\[ATTACHMENT:/, '').replace(/\]$/, '');
+      const jsonStr = m.replace(/^\[ATTACHMENT:\s*/, '').replace(/\]\s*$/, '');
       try {
         const parsed = JSON.parse(jsonStr);
         if (Array.isArray(parsed)) {
@@ -215,8 +215,14 @@ export function parseNoticeAttachment(notice: {
 
   // Strip all [ATTACHMENTS:...] and [ATTACHMENT:...] tags from cleanBody
   cleanBody = cleanBody
+    .replace(/[\s\n]*\[ATTACHMENTS:[\s\S]*?\]\s*\]/g, '')
     .replace(/[\s\n]*\[ATTACHMENTS:[\s\S]*?\]/g, '')
+    .replace(/[\s\n]*\[ATTACHMENTS:[\s\S]*$/g, '')
+    .replace(/[\s\n]*\[ATTACHMENT:[\s\S]*?\}\s*\]/g, '')
     .replace(/[\s\n]*\[ATTACHMENT:[\s\S]*?\]/g, '')
+    .replace(/[\s\n]*\[ATTACHMENT:[\s\S]*$/g, '')
+    .trim()
+    .replace(/\]+$/, '')
     .trim();
 
   // Deduplicate by URL

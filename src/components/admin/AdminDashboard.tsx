@@ -557,8 +557,14 @@ function NoticeForm({
 
     const noticeId = (notice?.id && notice.id.length === 36) ? notice.id : generateUUID();
     let finalBody = body
+      .replace(/[\s\n]*\[ATTACHMENTS:[\s\S]*?\]\s*\]/g, '')
       .replace(/[\s\n]*\[ATTACHMENTS:[\s\S]*?\]/g, '')
+      .replace(/[\s\n]*\[ATTACHMENTS:[\s\S]*$/g, '')
+      .replace(/[\s\n]*\[ATTACHMENT:[\s\S]*?\}\s*\]/g, '')
       .replace(/[\s\n]*\[ATTACHMENT:[\s\S]*?\]/g, '')
+      .replace(/[\s\n]*\[ATTACHMENT:[\s\S]*$/g, '')
+      .trim()
+      .replace(/\]+$/, '')
       .trim();
 
     if (attachments.length === 1) {
